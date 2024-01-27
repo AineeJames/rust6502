@@ -9,7 +9,7 @@ struct Args {
     binary_file: String,
 
     // Print all mem even if zeroed
-    #[arg(short, long, default_value_t = true)]
+    #[arg(short, long, default_value_t = false)]
     print_all_mem: bool,
 }
 
@@ -80,10 +80,12 @@ struct Cpu6502 {
     program_counter: u16,
     stack_pointer: u8,
     status_flags: StatusFlags,
+    cmdline_args: Args,
 }
 
-fn init_cpu6502() -> Cpu6502 {
+fn init_cpu6502(args: Args) -> Cpu6502 {
     let mut cpu = Cpu6502 {
+        cmdline_args: args,
         memory: vec![0; MEM_SIZE], // stack (0x0100, 0x01FF)
         accumulator: 0,
         x_index: 0,
@@ -117,7 +119,7 @@ impl Cpu6502 {
         for i in (0..MEM_SIZE).step_by(0x10) {
             let slice = &self.memory[i..i + 0x10];
 
-            if slice.iter().any(|&x| x > 0) {
+            if slice.iter().any(|&x| x > 0) || self.cmdline_args.print_all_mem {
                 print!("0x{i:#>04x}: ");
                 for byte in slice.iter().cloned() {
                     print!("{byte:02x} ");
@@ -158,7 +160,7 @@ fn main() {
     println!("Printing all mem {}!", args.print_all_mem);
 
     // TODO add command line arg to print all memory
-    let mut cpu: Cpu6502 = init_cpu6502();
+    let mut cpu: Cpu6502 = init_cpu6502(args);
     cpu.set_accumulator(2);
 
     cpu.set_accumulator(2);
