@@ -222,7 +222,10 @@ impl Cpu6502 {
                     info!("NOP");
                     self.program_counter += 1
                 }
-                _ => println!("Not implemented instruction"),
+                _ => {
+                    info!("Unimplemented instruction");
+                    println!("Not implemented instruction")
+                }
             }
             self.print_state();
             if self.cmdline_args.step_debug {
