@@ -1,4 +1,7 @@
 use clap::Parser;
+use std::fs;
+use std::io;
+use std::io::prelude::*;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -11,6 +14,18 @@ struct Args {
     // Print all mem even if zeroed
     #[arg(short, long, default_value_t = false)]
     print_all_mem: bool,
+}
+
+fn pause() {
+    let mut stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    // We want the cursor to stay at the end of the line, so we print without a newline and flush manually.
+    write!(stdout, "Press any key to continue...").unwrap();
+    stdout.flush().unwrap();
+
+    // Read a single byte and discard
+    let _ = stdin.read(&mut [0u8]).unwrap();
 }
 
 const MEM_SIZE: usize = 65536;
@@ -143,13 +158,61 @@ impl Cpu6502 {
         self.status_flags.print_status_flags_readable();
         println!("X register = {}", self.x_index);
         println!("Y register = {}", self.y_index);
-        println!("Accumulator = {}", self.accumulator);
-        println!("Program Counter = {}", self.program_counter);
+        println!("Accumulator = 0x{:#>04x}", self.accumulator);
+        println!("Program Counter = 0x{:#>04x}", self.program_counter);
         println!("Stack Pointer = {}", self.stack_pointer);
     }
 
-    fn load_code_into_memory(&self, code: &Vec<u8>, org: usize) {
-        unimplemented!("NOT DONEWARD");
+    fn load_file_into_memory(&mut self, org: usize) {
+        let code_result: Result<Vec<u8>, std::io::Error> =
+            fs::read(self.cmdline_args.binary_file.clone());
+        let code = match code_result {
+            Ok(code) => code,
+            Err(error) => panic!("Problem opening the file: {:?}", error),
+        };
+        self.memory[org..org + code.len()].copy_from_slice(&code);
+    }
+
+    fn run(&mut self) {
+        let rvec: u16 = (self.memory[0xfffc] as u16) << 8 | self.memory[0xfffd] as u16;
+        self.program_counter = rvec;
+        loop {
+            match *self.memory.get(self.program_counter as usize).unwrap() {
+                // LDA Immediate
+                0xa9 => {
+                    self.accumulator = *self
+                        .memory
+                        .get((self.program_counter + 1) as usize)
+                        .unwrap();
+                    self.program_counter += 2;
+                }
+                // INX
+                0xe8 => {
+                    self.x_index += 1;
+                    self.program_counter += 1;
+                }
+                // INY
+                0xc8 => {
+                    self.y_index += 1;
+                    self.program_counter += 1;
+                }
+                // SEC
+                0x38 => {
+                    self.status_flags.c = true;
+                    self.program_counter += 1;
+                }
+                0xe6 => {
+                    // inc memory immediate
+                    self.memory[(self.program_counter + 1) as usize] += 1;
+                    self.program_counter += 2;
+                }
+                // NOP
+                0xea => self.program_counter += 1,
+                _ => println!("Not implemented instruction"),
+            }
+            self.print_state();
+            pause();
+        }
     }
 }
 
@@ -163,14 +226,9 @@ fn main() {
     let mut cpu: Cpu6502 = init_cpu6502(args);
     cpu.set_accumulator(2);
 
-    cpu.set_accumulator(2);
+    cpu.load_file_into_memory(0x0600);
 
-    cpu.memory[0] = 'a' as u8;
-    cpu.memory[1] = 'i' as u8;
-    cpu.memory[2] = '/' as u8;
-    cpu.memory[3] = 'e' as u8;
-    cpu.memory[4] = 'n' as u8;
-    cpu.memory[0x0205] = 0x22;
+    cpu.run();
 
     cpu.dump_memory();
     cpu.print_state();
