@@ -1,8 +1,83 @@
 use clap::Parser;
-use log::{debug, info};
+use log::info;
 use std::fs;
 use std::io;
 use std::io::prelude::*;
+use std::ops::Add;
+
+const MEM_SIZE: usize = 65536;
+
+#[derive(Debug, Clone, Copy)]
+enum AddressingMode {
+    Accumulator,
+    Implied,
+    Immediate,
+    Absolute,
+    ZeroPage,
+    Relative,
+    AbsoluteIndirect,
+    AbsoluteIndirectX,
+    AbsoluteIndirectY,
+    ZeroPageX,
+    ZeroPageY,
+    ZeroPageIndexedIndirect,
+    ZeroPageIndirectIndexedY,
+}
+
+fn get_addressing_mode_operand_length(mode: AddressingMode) -> u8 {
+    match mode {
+        AddressingMode::Accumulator => 0,
+        AddressingMode::Implied => 1,
+        AddressingMode::Immediate => 1,
+        AddressingMode::Absolute => 2,
+        AddressingMode::ZeroPage => 1,
+        AddressingMode::Relative => 1,
+        AddressingMode::AbsoluteIndirect => 2,
+        AddressingMode::AbsoluteIndirectX => 2,
+        AddressingMode::AbsoluteIndirectY => 2,
+        AddressingMode::ZeroPageX => 1,
+        AddressingMode::ZeroPageY => 1,
+        AddressingMode::ZeroPageIndexedIndirect => 1,
+        AddressingMode::ZeroPageIndirectIndexedY => 1,
+    }
+}
+
+fn get_instruction_length(mode: AddressingMode) -> u8 {
+    1 + get_addressing_mode_operand_length(mode)
+}
+
+struct InstructionMetadata {
+    mode: AddressingMode,
+    instruction_name: String,
+    instruction_byte_length: u8,
+}
+
+impl InstructionMetadata {
+    fn new(mode: AddressingMode, instruction_name: String) -> InstructionMetadata {
+        InstructionMetadata {
+            mode: mode,
+            instruction_name: instruction_name,
+            instruction_byte_length: get_instruction_length(mode),
+        }
+    }
+}
+
+// TODO: at compile time lookup for instruction b
+fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
+    match opcode {
+        // ADC
+        0x6d => InstructionMetadata::new(AddressingMode::Absolute, String::from("ADC")),
+
+        // LDX
+        0xa2 => InstructionMetadata::new(AddressingMode::Immediate, String::from("LDX")),
+
+        // STX
+        0x8e => InstructionMetadata::new(AddressingMode::Absolute, String::from("STX")),
+        0x86 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("STX")),
+        0x96 => InstructionMetadata::new(AddressingMode::ZeroPageY, String::from("STX")),
+        _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
+    }
+}
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -22,6 +97,7 @@ struct Args {
 }
 
 fn pause() {
+    // pauses execution and waits for input
     let mut stdin = io::stdin();
     let mut stdout = io::stdout();
 
@@ -31,24 +107,6 @@ fn pause() {
 
     // Read a single byte and discard
     let _ = stdin.read(&mut [0u8]).unwrap();
-}
-
-const MEM_SIZE: usize = 65536;
-
-enum AddressingMode {
-    Accumulator,
-    Implied,
-    Immediate,
-    Absolute,
-    ZeroPage,
-    Relative,
-    AbsoluteIndirect,
-    AbsoluteIndirectX,
-    AbsoluteIndirectY,
-    ZeroPageX,
-    ZeroPageY,
-    ZeroPageIndexedIndirect,
-    ZeroPageIndirectIndexedY,
 }
 
 // 7  bit  0
@@ -75,7 +133,7 @@ enum Flag {
 }
 struct StatusFlags {
     n: bool,
-    o: bool,
+    v: bool,
     u: bool,
     b: bool,
     d: bool,
@@ -86,7 +144,7 @@ struct StatusFlags {
 impl StatusFlags {
     fn print_status_flags_readable(&self) {
         println!("Negative Flag: {}", self.n);
-        println!("Overflow Flag: {}", self.o);
+        println!("Overflow Flag: {}", self.v);
         println!("Unused Flag: {}", self.u);
         println!("Break Flag: {}", self.b);
         println!("Decimal Mode: {}", self.d);
@@ -97,7 +155,7 @@ impl StatusFlags {
     fn set_flag(&mut self, to_set_flag: Flag, flag_state: bool) {
         match to_set_flag {
             Flag::Negative => self.n = flag_state,
-            Flag::Overflow => self.o = flag_state,
+            Flag::Overflow => self.v = flag_state,
             Flag::Unused => self.u = flag_state,
             Flag::Break => self.b = flag_state,
             Flag::DecimalMode => self.d = flag_state,
@@ -130,7 +188,7 @@ fn init_cpu6502(args: Args) -> Cpu6502 {
         stack_pointer: 0,
         status_flags: StatusFlags {
             n: false,
-            o: false,
+            v: false,
             u: true,
             b: false,
             d: false,
@@ -177,8 +235,8 @@ impl Cpu6502 {
 
     fn print_state(&self) {
         self.status_flags.print_status_flags_readable();
-        println!("X register = {}", self.x_index);
-        println!("Y register = {}", self.y_index);
+        println!("X register = 0x{:#>02x}", self.x_index);
+        println!("Y register = 0x{:#>02x}", self.y_index);
         println!("Accumulator = 0x{:#>04x}", self.accumulator);
         println!("Program Counter = 0x{:#>04x}", self.program_counter);
         println!("Stack Pointer = {}", self.stack_pointer);
@@ -197,15 +255,70 @@ impl Cpu6502 {
 
     fn get_next_byte(&mut self) -> u8 {
         let instruction: u8 = *self.memory.get(self.program_counter as usize).unwrap();
-        self.program_counter += 1;
         return instruction;
+    }
+
+    fn print_instruction(&self, instruction: &InstructionMetadata) {
+        // STX (ZeroPageY) op1, op2
+        print!("{} ({:?}) ", instruction.instruction_name, instruction.mode);
+        for i in 1..(instruction.instruction_byte_length) {
+            if i == instruction.instruction_byte_length - 1 {
+                print!(
+                    "0x{:#>02x}\n",
+                    self.memory[(self.program_counter + i as u16) as usize]
+                );
+                return;
+            }
+            print!(
+                "0x{:#>02x}, ",
+                self.memory[(self.program_counter + i as u16) as usize]
+            )
+        }
+    }
+
+    fn stx(&mut self, mode: AddressingMode) {
+        // store index x into memory
+        match mode {
+            AddressingMode::Absolute => {
+                let ll = self.memory[(self.program_counter + 1) as usize] as usize;
+                let hh = self.memory[(self.program_counter + 2) as usize] as usize;
+                let addr = (hh << 8) | ll;
+                self.memory[addr] = self.x_index;
+            }
+            AddressingMode::ZeroPage => {
+                let addr = self.memory[(self.program_counter + 1) as usize] as usize;
+                self.memory[addr] = self.x_index;
+            }
+            AddressingMode::ZeroPageY => {
+                let mut addr = self.memory[(self.program_counter + 1) as usize] as usize;
+                addr += self.y_index as usize;
+                self.memory[addr] = self.x_index;
+            }
+            _ => unreachable!(),
+        };
     }
 
     fn run(&mut self) {
         let rvec: u16 = (self.memory[0xfffc] as u16) << 8 | self.memory[0xfffd] as u16;
         self.program_counter = rvec;
         loop {
-            match self.get_next_byte() {
+            self.print_state();
+
+            let cur_opcode = self.get_next_byte();
+            let instruction: InstructionMetadata = get_opcode_metadata(cur_opcode);
+            self.print_instruction(&instruction);
+
+            if self.cmdline_args.step_debug {
+                pause();
+            }
+
+            match instruction.instruction_name.as_str() {
+                "ADC" => self.adc(instruction.mode),
+                "STX" => self.stx(instruction.mode),
+                "LDX" => self.ldx(instruction.mode),
+                _ => todo!("Implement instuction"),
+            }
+            /*             match cur_opcode {
                 // LDA Immediate
                 0xa9 => {
                     info!("LDA");
@@ -241,29 +354,61 @@ impl Cpu6502 {
                     info!("Unimplemented instruction");
                     println!("Not implemented instruction")
                 }
+            } */
+
+            // increment program counter by instruction length
+            self.program_counter += instruction.instruction_byte_length as u16;
+        }
+    }
+
+    fn adc(&mut self, mode: AddressingMode) {
+        let carry_add = self.status_flags.c as u8;
+        match mode {
+            // when carry is set add 1
+            // warning decimal mode not implemented
+            AddressingMode::Immediate => {}
+            AddressingMode::Absolute => {
+                // get address
+                let ll = self.memory[(self.program_counter + 1) as usize] as usize;
+                let hh = self.memory[(self.program_counter + 2) as usize] as usize;
+                let addr = (hh << 8) | ll;
+
+                let mem_before_add: u16 = self.memory[addr as usize] as u16;
+                let sum = mem_before_add + self.accumulator as u16 + carry_add as u16;
+                if sum > 255 {
+                    self.accumulator = sum as u8;
+                    self.status_flags.c = true;
+                } else {
+                    self.accumulator = sum as u8;
+                }
             }
-            self.print_state();
-            if self.cmdline_args.step_debug {
-                pause();
+            _ => unreachable!(),
+        }
+        self.status_flags.c = false;
+    }
+    fn ldx(&mut self, mode: AddressingMode) {
+        match mode {
+            AddressingMode::Immediate => {
+                self.x_index = self.memory[self.program_counter as usize + 1];
             }
+            _ => unreachable!(),
         }
     }
 }
 
 fn main() {
-    // TODO add nice logging where we can print the instruction name and program counter
     let args = Args::parse();
     env_logger::init();
 
     println!("Running {}!", args.binary_file);
     println!("Printing all mem {}!", args.print_all_mem);
 
-    // TODO add command line arg to print all memory
     let mut cpu: Cpu6502 = init_cpu6502(args);
-    cpu.set_accumulator(2);
 
     cpu.load_file_into_memory(0x0600);
-
+    cpu.y_index += 1;
+    cpu.accumulator = 3;
+    cpu.memory[0x1234] = 1;
     cpu.run();
 
     cpu.dump_memory();
