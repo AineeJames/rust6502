@@ -1,4 +1,5 @@
 use clap::Parser;
+use log::{debug, info};
 use std::fs;
 use std::io;
 use std::io::prelude::*;
@@ -14,6 +15,10 @@ struct Args {
     // Print all mem even if zeroed
     #[arg(short, long, default_value_t = false)]
     print_all_mem: bool,
+
+    // Print all mem even if zeroed
+    #[arg(short, long, default_value_t = false)]
+    step_debug: bool,
 }
 
 fn pause() {
@@ -180,6 +185,7 @@ impl Cpu6502 {
             match *self.memory.get(self.program_counter as usize).unwrap() {
                 // LDA Immediate
                 0xa9 => {
+                    info!("LDA");
                     self.accumulator = *self
                         .memory
                         .get((self.program_counter + 1) as usize)
@@ -188,36 +194,48 @@ impl Cpu6502 {
                 }
                 // INX
                 0xe8 => {
+                    info!("INX");
                     self.x_index += 1;
                     self.program_counter += 1;
                 }
                 // INY
                 0xc8 => {
+                    info!("INY");
                     self.y_index += 1;
                     self.program_counter += 1;
                 }
                 // SEC
                 0x38 => {
+                    info!("SEC");
                     self.status_flags.c = true;
                     self.program_counter += 1;
                 }
+                // INC
                 0xe6 => {
                     // inc memory immediate
+                    info!("INC");
                     self.memory[(self.program_counter + 1) as usize] += 1;
                     self.program_counter += 2;
                 }
                 // NOP
-                0xea => self.program_counter += 1,
+                0xea => {
+                    info!("NOP");
+                    self.program_counter += 1
+                }
                 _ => println!("Not implemented instruction"),
             }
             self.print_state();
-            pause();
+            if self.cmdline_args.step_debug {
+                pause();
+            }
         }
     }
 }
 
 fn main() {
+    // TODO add nice logging where we can print the instruction name and program counter
     let args = Args::parse();
+    env_logger::init();
 
     println!("Running {}!", args.binary_file);
     println!("Printing all mem {}!", args.print_all_mem);
