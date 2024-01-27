@@ -166,6 +166,7 @@ impl Cpu6502 {
         println!("Accumulator = 0x{:#>04x}", self.accumulator);
         println!("Program Counter = 0x{:#>04x}", self.program_counter);
         println!("Stack Pointer = {}", self.stack_pointer);
+        self.dump_memory();
     }
 
     fn load_file_into_memory(&mut self, org: usize) {
@@ -178,49 +179,47 @@ impl Cpu6502 {
         self.memory[org..org + code.len()].copy_from_slice(&code);
     }
 
+    fn get_next_byte(&mut self) -> u8 {
+        let instruction: u8 = *self.memory.get(self.program_counter as usize).unwrap();
+        self.program_counter += 1;
+        return instruction;
+    }
+
     fn run(&mut self) {
         let rvec: u16 = (self.memory[0xfffc] as u16) << 8 | self.memory[0xfffd] as u16;
         self.program_counter = rvec;
         loop {
-            match *self.memory.get(self.program_counter as usize).unwrap() {
+            match self.get_next_byte() {
                 // LDA Immediate
                 0xa9 => {
                     info!("LDA");
-                    self.accumulator = *self
-                        .memory
-                        .get((self.program_counter + 1) as usize)
-                        .unwrap();
-                    self.program_counter += 2;
+                    self.accumulator = self.get_next_byte();
                 }
                 // INX
                 0xe8 => {
                     info!("INX");
                     self.x_index += 1;
-                    self.program_counter += 1;
                 }
                 // INY
                 0xc8 => {
                     info!("INY");
                     self.y_index += 1;
-                    self.program_counter += 1;
                 }
                 // SEC
                 0x38 => {
                     info!("SEC");
                     self.status_flags.c = true;
-                    self.program_counter += 1;
                 }
                 // INC
                 0xe6 => {
                     // inc memory immediate
                     info!("INC");
-                    self.memory[(self.program_counter + 1) as usize] += 1;
-                    self.program_counter += 2;
+                    let addr = self.get_next_byte();
+                    self.memory[addr as usize] += 1;
                 }
                 // NOP
                 0xea => {
                     info!("NOP");
-                    self.program_counter += 1
                 }
                 _ => {
                     info!("Unimplemented instruction");
