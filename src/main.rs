@@ -35,6 +35,22 @@ fn pause() {
 
 const MEM_SIZE: usize = 65536;
 
+enum AddressingMode {
+    Accumulator,
+    Implied,
+    Immediate,
+    Absolute,
+    ZeroPage,
+    Relative,
+    AbsoluteIndirect,
+    AbsoluteIndirectX,
+    AbsoluteIndirectY,
+    ZeroPageX,
+    ZeroPageY,
+    ZeroPageIndexedIndirect,
+    ZeroPageIndirectIndexedY,
+}
+
 // 7  bit  0
 // ---- ----
 // NV1B DIZC
