@@ -1,4 +1,5 @@
 use crate::utils::pause::pause_for_input;
+use log::{debug, info};
 
 use clap::Parser;
 
@@ -400,7 +401,7 @@ impl Cpu6502 {
         // has decimal mode flag set need to treat
         // hex as decimal for example 0x65 == 65
         let addr = self.get_addr(mode);
-        println!("Address in adc is {:#>02x}", addr);
+        debug!("Address being used to ADC {:#>04x}", addr);
         let carry_add = self.status_flags.c as u8;
         let mem_val: u16 = self.memory[addr as usize] as u16;
         let overflow_flag_before_add: bool = (self.accumulator & (1 << 7)) == 1;
