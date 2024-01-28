@@ -1,9 +1,7 @@
 use clap::Parser;
-use log::info;
 use std::fs;
 use std::io;
 use std::io::prelude::*;
-use std::ops::Add;
 
 const MEM_SIZE: usize = 65536;
 
@@ -74,6 +72,10 @@ fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
 
         // LDX
         0xa2 => InstructionMetadata::new(AddressingMode::Immediate, String::from("LDX")),
+        0xae => InstructionMetadata::new(AddressingMode::Absolute, String::from("LDX")),
+        0xbe => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("LDX")),
+        0xa6 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("LDX")),
+        0xb6 => InstructionMetadata::new(AddressingMode::ZeroPageY, String::from("LDX")),
 
         // STX
         0x8e => InstructionMetadata::new(AddressingMode::Absolute, String::from("STX")),
@@ -135,6 +137,7 @@ enum Flag {
     Zero,
     Carry,
 }
+
 struct StatusFlags {
     n: bool,
     v: bool,
@@ -214,10 +217,6 @@ enum Index {
 }
 
 impl Cpu6502 {
-    fn set_accumulator(&mut self, newacc: u8) {
-        self.accumulator = newacc;
-    }
-
     fn dump_memory(&self) {
         for i in (0..MEM_SIZE).step_by(0x10) {
             let slice = &self.memory[i..i + 0x10];
@@ -228,7 +227,6 @@ impl Cpu6502 {
                     print!("{byte:02x} ");
                 }
 
-                // aiden char print
                 for &byte in slice {
                     if byte.is_ascii() && byte.is_ascii_graphic() {
                         let c: char = byte as char;
@@ -267,22 +265,32 @@ impl Cpu6502 {
         return instruction;
     }
 
-    fn print_instruction(&self, instruction: &InstructionMetadata) {
-        // STX (ZeroPageY) op1, op2
-        print!("{} ({:?}) ", instruction.instruction_name, instruction.mode);
-        for i in 1..(instruction.instruction_byte_length) {
-            if i == instruction.instruction_byte_length - 1 {
-                print!(
-                    "0x{:#>02x}\n",
-                    self.memory[(self.program_counter + i as u16) as usize]
-                );
-                return;
+    fn print_instruction(&mut self, instruction: &InstructionMetadata) {
+        // STX (ZeroPageY) operand
+        let operand = match instruction.mode {
+            AddressingMode::Absolute => format!("${:#>04x}", self.get_addr(instruction.mode)),
+            AddressingMode::Immediate => {
+                let addr = self.get_addr(instruction.mode);
+                format!("#${:#>02x}", self.memory[addr])
             }
-            print!(
-                "0x{:#>02x}, ",
-                self.memory[(self.program_counter + i as u16) as usize]
-            )
-        }
+            AddressingMode::ZeroPage => format!("${:#>02x}", self.get_addr(instruction.mode)),
+            AddressingMode::ZeroPageX => format!(
+                "${:#>02x},X",
+                self.get_addr(instruction.mode) - self.x_index as usize
+            ),
+            AddressingMode::ZeroPageY => format!(
+                "${:#>02x},Y",
+                self.get_addr(instruction.mode) - self.y_index as usize
+            ),
+            _ => todo!(
+                "Add format for addressing mode {:?} in print_instruction()",
+                instruction.mode
+            ),
+        };
+        println!(
+            "\nNEXT INSTRUCTION: {} {}",
+            instruction.instruction_name, operand
+        );
     }
 
     fn get_abs_addr(&self) -> usize {
@@ -325,14 +333,14 @@ impl Cpu6502 {
         let val = self.memory[addr];
         self.x_index = val;
         if val == 0 {
-            self.status_flags.z = true;
+            self.status_flags.set_flag(Flag::Zero, true);
         } else {
-            self.status_flags.z = false;
+            self.status_flags.set_flag(Flag::Zero, false);
         }
         if (val & 0b01000000) != 0 {
-            self.status_flags.n = true;
+            self.status_flags.set_flag(Flag::Zero, true);
         } else {
-            self.status_flags.n = false;
+            self.status_flags.set_flag(Flag::Zero, false);
         }
     }
 
@@ -356,50 +364,13 @@ impl Cpu6502 {
                 pause();
             }
 
-            match instruction.instruction_name.as_str() {
+            let instruction_name = instruction.instruction_name.as_str();
+            match instruction_name {
                 "ADC" => self.adc(instruction.mode),
                 "STX" => self.stx(instruction.mode),
                 "LDX" => self.ldx(instruction.mode),
-                _ => todo!("Implement instuction"),
+                _ => todo!("Add instruction {instruction_name} to run()"),
             }
-            /*             match cur_opcode {
-                // LDA Immediate
-                0xa9 => {
-                    info!("LDA");
-                    self.accumulator = self.get_next_byte();
-                }
-                // INX
-                0xe8 => {
-                    info!("INX");
-                    self.x_index += 1;
-                }
-                // INY
-                0xc8 => {
-                    info!("INY");
-                    self.y_index += 1;
-                }
-                // SEC
-                0x38 => {
-                    info!("SEC");
-                    self.status_flags.c = true;
-                }
-                // INC
-                0xe6 => {
-                    // inc memory immediate
-                    info!("INC");
-                    let addr = self.get_next_byte();
-                    self.memory[addr as usize] += 1;
-                }
-                // NOP
-                0xea => {
-                    info!("NOP");
-                }
-                _ => {
-                    info!("Unimplemented instruction");
-                    println!("Not implemented instruction")
-                }
-            } */
-
             // increment program counter by instruction length
             self.program_counter += instruction.instruction_byte_length as u16;
         }
