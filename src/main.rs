@@ -59,8 +59,8 @@ struct InstructionMetadata {
 impl InstructionMetadata {
     fn new(mode: AddressingMode, instruction_name: String) -> InstructionMetadata {
         InstructionMetadata {
-            mode: mode,
-            instruction_name: instruction_name,
+            mode,
+            instruction_name,
             instruction_byte_length: get_instruction_length(mode),
         }
     }
