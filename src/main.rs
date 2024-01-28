@@ -13,6 +13,8 @@ enum AddressingMode {
     Implied,
     Immediate,
     Absolute,
+    AbsoluteXIndexed,
+    AbsoluteYIndexed,
     ZeroPage,
     Relative,
     AbsoluteIndirect,
@@ -30,6 +32,8 @@ fn get_addressing_mode_operand_length(mode: AddressingMode) -> u8 {
         AddressingMode::Implied => 1,
         AddressingMode::Immediate => 1,
         AddressingMode::Absolute => 2,
+        AddressingMode::AbsoluteXIndexed => 2,
+        AddressingMode::AbsoluteYIndexed => 2,
         AddressingMode::ZeroPage => 1,
         AddressingMode::Relative => 1,
         AddressingMode::AbsoluteIndirect => 2,
@@ -303,12 +307,23 @@ impl Cpu6502 {
 
     fn get_addr(&mut self, mode: AddressingMode) -> usize {
         let addr: usize = match mode {
+            AddressingMode::Immediate => self.program_counter as usize + 1,
             AddressingMode::Absolute => self.get_abs_addr(),
+            AddressingMode::AbsoluteXIndexed => self.get_abs_addr() + self.x_index as usize,
+            AddressingMode::AbsoluteYIndexed => self.get_abs_addr() + self.y_index as usize,
             AddressingMode::ZeroPage => self.get_zpg_addr(None),
+            AddressingMode::ZeroPageX => self.get_zpg_addr(Some(Index::X)),
             AddressingMode::ZeroPageY => self.get_zpg_addr(Some(Index::Y)),
             _ => todo!("Mode not implemented in get_addr()"),
         };
         return addr;
+    }
+
+    fn ldx(&mut self, mode: AddressingMode) {
+        // load from memory into x
+        let addr = self.get_addr(mode);
+        let val = self.memory[addr];
+        self.x_index = val;
     }
 
     fn stx(&mut self, mode: AddressingMode) {
@@ -404,14 +419,6 @@ impl Cpu6502 {
             _ => unreachable!(),
         }
         self.status_flags.c = false;
-    }
-    fn ldx(&mut self, mode: AddressingMode) {
-        match mode {
-            AddressingMode::Immediate => {
-                self.x_index = self.memory[self.program_counter as usize + 1];
-            }
-            _ => unreachable!(),
-        }
     }
 }
 
