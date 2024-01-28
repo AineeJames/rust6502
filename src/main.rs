@@ -324,6 +324,16 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         let val = self.memory[addr];
         self.x_index = val;
+        if val == 0 {
+            self.status_flags.z = true;
+        } else {
+            self.status_flags.z = false;
+        }
+        if (val & 0b01000000) != 0 {
+            self.status_flags.n = true;
+        } else {
+            self.status_flags.n = false;
+        }
     }
 
     fn stx(&mut self, mode: AddressingMode) {
