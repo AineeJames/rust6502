@@ -245,9 +245,6 @@ pub fn init_cpu6502(args: Args) -> Cpu6502 {
             c: false,
         },
     };
-    // reset vec
-    cpu.memory[0xfffc] = 0x06;
-    cpu.memory[0xfffd] = 0x00;
 
     cpu
 }
@@ -539,7 +536,7 @@ impl Cpu6502 {
     }
 
     pub fn run(&mut self) {
-        let rvec: u16 = (self.memory[0xfffc] as u16) << 8 | self.memory[0xfffd] as u16;
+        let rvec: u16 = (self.memory[0xfffd] as u16) << 8 | self.memory[0xfffc] as u16;
         self.program_counter = rvec;
         loop {
             self.print_state();
