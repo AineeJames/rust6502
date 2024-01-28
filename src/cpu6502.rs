@@ -3,8 +3,6 @@ use crate::utils::pause::pause_for_input;
 use clap::Parser;
 
 use std::fs;
-use std::io;
-use std::io::prelude::*;
 
 const MEM_SIZE: usize = 65536;
 
@@ -288,6 +286,10 @@ impl Cpu6502 {
             AddressingMode::ZeroPageIndirectIndexedX => format!(
                 "$({:#>02x},X)",
                 self.get_addr(instruction.mode) - self.x_index as usize
+            ),
+            AddressingMode::ZeroPageIndirectIndexedY => format!(
+                "$({:#>02x},Y)",
+                self.get_addr(instruction.mode) - self.y_index as usize
             ),
             _ => todo!(
                 "Add format for addressing mode {:?} in print_instruction()",
