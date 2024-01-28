@@ -482,16 +482,9 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         let val = self.memory[addr];
         self.x_index = val;
-        if val == 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
-        if (val & 0b01000000) != 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
+        self.status_flags.set_flag(Flag::Zero, val == 0);
+        self.status_flags
+            .set_flag(Flag::Negative, val & 0b1000000 != 0);
     }
 
     fn ldy(&mut self, mode: AddressingMode) {
@@ -499,16 +492,9 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         let val = self.memory[addr];
         self.y_index = val;
-        if val == 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
-        if (val & 0b10000000) != 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
+        self.status_flags.set_flag(Flag::Zero, val == 0);
+        self.status_flags
+            .set_flag(Flag::Negative, val & 0b1000000 != 0);
     }
 
     fn stx(&mut self, mode: AddressingMode) {
@@ -531,16 +517,12 @@ impl Cpu6502 {
         if self.memory[addr] > self.x_index {
             self.status_flags.set_flag(Flag::Carry, false);
         }
-        if (self.x_index - self.memory[addr]) & 0b10000000 != 0 {
-            self.status_flags.set_flag(Flag::Negative, true);
-        } else {
-            self.status_flags.set_flag(Flag::Negative, false);
-        }
-        if self.x_index == self.memory[addr] {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
+        self.status_flags.set_flag(
+            Flag::Negative,
+            (self.x_index - self.memory[addr]) & 0b1000000 != 0,
+        );
+        self.status_flags
+            .set_flag(Flag::Zero, self.x_index == self.memory[addr]);
     }
 
     fn cpy(&mut self, mode: AddressingMode) {
@@ -551,59 +533,35 @@ impl Cpu6502 {
         if self.memory[addr] > self.y_index {
             self.status_flags.set_flag(Flag::Carry, false);
         }
-        if (self.y_index - self.memory[addr]) & 0b10000000 != 0 {
-            self.status_flags.set_flag(Flag::Negative, true);
-        } else {
-            self.status_flags.set_flag(Flag::Negative, false);
-        }
-        if self.y_index == self.memory[addr] {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
+        self.status_flags.set_flag(
+            Flag::Negative,
+            (self.y_index - self.memory[addr]) & 0b1000000 != 0,
+        );
+        self.status_flags
+            .set_flag(Flag::Zero, self.y_index == self.memory[addr]);
     }
 
     fn dec(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
         self.memory[addr] -= 1;
-        if (self.memory[addr]) & 0b10000000 != 0 {
-            self.status_flags.set_flag(Flag::Negative, true);
-        } else {
-            self.status_flags.set_flag(Flag::Negative, false);
-        }
-        if self.memory[addr] == 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
+        self.status_flags
+            .set_flag(Flag::Negative, self.memory[addr] & 0b10000000 != 0);
+        self.status_flags
+            .set_flag(Flag::Zero, self.memory[addr] == 0);
     }
 
     fn dex(&mut self) {
         self.x_index -= 1;
-        if (self.x_index) & 0b10000000 != 0 {
-            self.status_flags.set_flag(Flag::Negative, true);
-        } else {
-            self.status_flags.set_flag(Flag::Negative, false);
-        }
-        if self.x_index == 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
+        self.status_flags
+            .set_flag(Flag::Negative, self.x_index & 0b10000000 != 0);
+        self.status_flags.set_flag(Flag::Zero, self.x_index == 0);
     }
 
     fn dey(&mut self) {
         self.y_index -= 1;
-        if (self.y_index) & 0b10000000 != 0 {
-            self.status_flags.set_flag(Flag::Negative, true);
-        } else {
-            self.status_flags.set_flag(Flag::Negative, false);
-        }
-        if self.y_index == 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
+        self.status_flags
+            .set_flag(Flag::Negative, self.y_index & 0b10000000 != 0);
+        self.status_flags.set_flag(Flag::Zero, self.y_index == 0);
     }
 
     fn jmp(&mut self, mode: AddressingMode) {
@@ -614,16 +572,10 @@ impl Cpu6502 {
     fn lda(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
         self.accumulator = self.memory[addr];
-        if self.accumulator == 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
-        if (self.accumulator & 0b10000000) != 0 {
-            self.status_flags.set_flag(Flag::Negative, true);
-        } else {
-            self.status_flags.set_flag(Flag::Negative, false);
-        }
+        self.status_flags
+            .set_flag(Flag::Zero, self.accumulator == 0);
+        self.status_flags
+            .set_flag(Flag::Negative, (self.accumulator & 0b10000000) != 0);
     }
 
     fn sta(&mut self, mode: AddressingMode) {
@@ -653,34 +605,19 @@ impl Cpu6502 {
         let value = self.memory[addr];
         let result = self.accumulator.wrapping_sub(value);
 
-        if result == 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
-
-        if result & 0b10000000 != 0 {
-            self.status_flags.set_flag(Flag::Negative, true);
-        } else {
-            self.status_flags.set_flag(Flag::Negative, false);
-        }
-
-        if value <= self.accumulator {
-            self.status_flags.set_flag(Flag::Carry, true);
-        } else {
-            self.status_flags.set_flag(Flag::Carry, false);
-        }
+        self.status_flags.set_flag(Flag::Zero, result == 0);
+        self.status_flags
+            .set_flag(Flag::Negative, result & 0b10000000 != 0);
+        self.status_flags
+            .set_flag(Flag::Carry, value <= self.accumulator);
     }
 
     fn beq(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
         let offset = self.memory[addr] as i8;
-        println!("DEBUG: addr ({:?}) = 0x{:#>04x}", mode, addr as u8);
-        println!("DEBUG: offset = {}", offset as i8);
         if self.status_flags.z {
             let new_pc = self.program_counter + 2 + offset as u16;
             self.program_counter = new_pc;
-            println!("DEBUG: new_pc = 0x{:#>04x}", new_pc as u16);
         } else {
             self.program_counter += 2;
         }
@@ -692,17 +629,9 @@ impl Cpu6502 {
         let new_value = value.wrapping_add(1);
         self.memory[addr] = new_value;
 
-        if new_value == 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
-
-        if new_value & 0b10000000 != 0 {
-            self.status_flags.set_flag(Flag::Negative, true);
-        } else {
-            self.status_flags.set_flag(Flag::Negative, false);
-        }
+        self.status_flags.set_flag(Flag::Zero, new_value == 0);
+        self.status_flags
+            .set_flag(Flag::Negative, new_value & 0b10000000 != 0);
     }
 
     fn inx(&mut self) {
@@ -714,17 +643,9 @@ impl Cpu6502 {
 
         self.x_index = result;
 
-        if result & 0b10000000 != 0 {
-            self.status_flags.set_flag(Flag::Negative, true);
-        } else {
-            self.status_flags.set_flag(Flag::Negative, false);
-        }
-
-        if result == 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
+        self.status_flags
+            .set_flag(Flag::Negative, result & 0b10000000 != 0);
+        self.status_flags.set_flag(Flag::Zero, result == 0);
     }
 
     fn iny(&mut self) {
@@ -736,17 +657,9 @@ impl Cpu6502 {
 
         self.y_index = result;
 
-        if result & 0b10000000 != 0 {
-            self.status_flags.set_flag(Flag::Negative, true);
-        } else {
-            self.status_flags.set_flag(Flag::Negative, false);
-        }
-
-        if result == 0 {
-            self.status_flags.set_flag(Flag::Zero, true);
-        } else {
-            self.status_flags.set_flag(Flag::Zero, false);
-        }
+        self.status_flags
+            .set_flag(Flag::Negative, result & 0b10000000 != 0);
+        self.status_flags.set_flag(Flag::Zero, result == 0);
     }
 
     fn push_stack(&mut self, value: u8) {
@@ -818,16 +731,11 @@ impl Cpu6502 {
         let overflow_flag_before_add: bool = (self.accumulator & (1 << 7)) == 1;
         let sum = mem_val + self.accumulator as u16 + carry_add as u16;
         self.accumulator = sum as u8;
-        if sum > 255 {
-            self.status_flags.set_flag(Flag::Carry, true);
-        } else {
-            self.status_flags.set_flag(Flag::Carry, false);
-        }
+        self.status_flags.set_flag(Flag::Carry, sum > 255);
         let overflow_flag_after_add: bool = (self.accumulator & (1 << 7)) == 1;
-        if overflow_flag_before_add != overflow_flag_after_add {
-            self.status_flags.set_flag(Flag::Overflow, true);
-        } else {
-            self.status_flags.set_flag(Flag::Overflow, false);
-        }
+        self.status_flags.set_flag(
+            Flag::Overflow,
+            overflow_flag_after_add != overflow_flag_before_add,
+        );
     }
 }
