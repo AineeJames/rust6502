@@ -14,7 +14,7 @@ fn main() {
 
     let mut cpu: cpu6502::Cpu6502 = cpu6502::init_cpu6502(args);
 
-    cpu.load_file_into_memory(0x0600);
+    cpu.load_file_into_memory();
     cpu.y_index += 1;
     cpu.accumulator = 3;
     cpu.memory[0x1234] = 1;

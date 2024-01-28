@@ -8,7 +8,6 @@ cargo run -- -b examples/xy_index_test.bin -s
 
 To Implement:
 
-- LDA
 - TAX
 - PHA
 - ASL
@@ -27,10 +26,8 @@ To Implement:
 - PLA
 - ROL
 - EOR
-- JSR
 - BEQ
 - CLI
-- STA
 - TXA
 - PLP
 - ROR
@@ -42,7 +39,6 @@ To Implement:
 - TXS
 - SBC
 - INX
-- RTS
 - BNE
 - SEC
 - TYA

@@ -135,6 +135,74 @@ fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
 
         // NOP
         0xea => InstructionMetadata::new(AddressingMode::Implied, String::from("NOP")),
+
+        // LDA
+        0xa9 => InstructionMetadata::new(AddressingMode::Immediate, String::from("LDA")),
+        0xad => InstructionMetadata::new(AddressingMode::Absolute, String::from("LDA")),
+        0xbd => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("LDA")),
+        0xb9 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("LDA")),
+        0xa5 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("LDA")),
+        0xb5 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("LDA")),
+        0xa1 => InstructionMetadata::new(
+            AddressingMode::ZeroPageIndirectIndexedX,
+            String::from("LDA"),
+        ),
+        0xb1 => InstructionMetadata::new(
+            AddressingMode::ZeroPageIndirectIndexedY,
+            String::from("LDA"),
+        ),
+
+        // STA
+        0x8d => InstructionMetadata::new(AddressingMode::Absolute, String::from("STA")),
+        0x9d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("STA")),
+        0x99 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("STA")),
+        0x85 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("STA")),
+        0x95 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("STA")),
+        0x81 => InstructionMetadata::new(
+            AddressingMode::ZeroPageIndirectIndexedX,
+            String::from("STA"),
+        ),
+        0x91 => InstructionMetadata::new(
+            AddressingMode::ZeroPageIndirectIndexedY,
+            String::from("STA"),
+        ),
+
+        // JSR
+        0x20 => InstructionMetadata::new(AddressingMode::Absolute, String::from("JSR")),
+
+        // RTS
+        0x60 => InstructionMetadata::new(AddressingMode::Implied, String::from("RTS")),
+
+        // CMP
+        0xc9 => InstructionMetadata::new(AddressingMode::Immediate, String::from("CMP")),
+        0xcd => InstructionMetadata::new(AddressingMode::Absolute, String::from("CMP")),
+        0xdd => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("CMP")),
+        0xd9 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("CMP")),
+        0xc5 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("CMP")),
+        0xd5 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("CMP")),
+        0xc1 => InstructionMetadata::new(
+            AddressingMode::ZeroPageIndirectIndexedX,
+            String::from("CMP"),
+        ),
+        0xd1 => InstructionMetadata::new(
+            AddressingMode::ZeroPageIndirectIndexedY,
+            String::from("CMP"),
+        ),
+
+        // BEQ
+        0xf0 => InstructionMetadata::new(AddressingMode::Relative, String::from("BEQ")),
+
+        // INC
+        0xee => InstructionMetadata::new(AddressingMode::Absolute, String::from("INC")),
+        0xfe => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("INC")),
+        0xe6 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("INC")),
+        0xf6 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("INC")),
+
+        // INX
+        0xe8 => InstructionMetadata::new(AddressingMode::Implied, String::from("INX")),
+
+        // INY
+        0xc8 => InstructionMetadata::new(AddressingMode::Implied, String::from("INY")),
         _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
     }
 }
@@ -233,7 +301,7 @@ pub fn init_cpu6502(args: Args) -> Cpu6502 {
         x_index: 0,
         y_index: 0,
         program_counter: 0,
-        stack_pointer: 0,
+        stack_pointer: 0xFF,
         status_flags: StatusFlags {
             n: false,
             v: false,
@@ -284,18 +352,18 @@ impl Cpu6502 {
         println!("Y register = 0x{:#>02x}", self.y_index);
         println!("Accumulator = 0x{:#>04x}", self.accumulator);
         println!("Program Counter = 0x{:#>04x}", self.program_counter);
-        println!("Stack Pointer = {}", self.stack_pointer);
+        println!("Stack Pointer = 0x{:#>02x}", self.stack_pointer);
         self.dump_memory();
     }
 
-    pub fn load_file_into_memory(&mut self, org: usize) {
+    pub fn load_file_into_memory(&mut self) {
         let code_result: Result<Vec<u8>, std::io::Error> =
             fs::read(self.cmdline_args.binary_file.clone());
         let code = match code_result {
             Ok(code) => code,
             Err(error) => panic!("Problem opening the file: {:?}", error),
         };
-        self.memory[org..org + code.len()].copy_from_slice(&code);
+        self.memory = code;
     }
 
     fn get_next_byte(&mut self) -> u8 {
@@ -306,6 +374,13 @@ impl Cpu6502 {
     fn print_instruction(&mut self, instruction: &InstructionMetadata) {
         // STX (ZeroPageY) operand
         let operand = match instruction.mode {
+            AddressingMode::AbsoluteXIndexed => format!(
+                "${:#>04x},X",
+                self.get_addr(AddressingMode::AbsoluteXIndexed)
+            ),
+            AddressingMode::Relative => {
+                format!("${:#>04x}", self.get_addr(AddressingMode::Relative))
+            }
             AddressingMode::Implied => format!(""),
             AddressingMode::Absolute => format!("${:#>04x}", self.get_addr(instruction.mode)),
             AddressingMode::AbsoluteIndirect => {
@@ -386,6 +461,7 @@ impl Cpu6502 {
     fn get_addr(&mut self, mode: AddressingMode) -> usize {
         let addr: usize = match mode {
             AddressingMode::Implied => 0,
+            AddressingMode::Relative => self.program_counter as usize + 1,
             AddressingMode::Immediate => self.program_counter as usize + 1,
             AddressingMode::Absolute => self.get_abs_addr(),
             AddressingMode::AbsoluteIndirect => self.get_abs_indirect_addr(),
@@ -535,6 +611,156 @@ impl Cpu6502 {
         self.program_counter = addr as u16
     }
 
+    fn lda(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
+        self.accumulator = self.memory[addr];
+        if self.accumulator == 0 {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+        if (self.accumulator & 0b10000000) != 0 {
+            self.status_flags.set_flag(Flag::Negative, true);
+        } else {
+            self.status_flags.set_flag(Flag::Negative, false);
+        }
+    }
+
+    fn sta(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
+        self.memory[addr] = self.accumulator;
+    }
+
+    fn jsr(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
+        // Store the return address onto the stack
+        let return_addr = self.program_counter + 3; // Adjust for the JSR instruction size
+        self.push_stack((return_addr >> 8) as u8); // High byte
+        self.push_stack((return_addr & 0xFF) as u8); // Low byte
+                                                     // Set the program counter to the target address
+        self.program_counter = addr as u16;
+    }
+
+    fn rts(&mut self) {
+        let low_byte = self.pop_stack();
+        let high_byte = self.pop_stack();
+        let return_addr = ((high_byte as u16) << 8) | low_byte as u16;
+        self.program_counter = return_addr;
+    }
+
+    fn cmp(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
+        let value = self.memory[addr];
+        let result = self.accumulator.wrapping_sub(value);
+
+        if result == 0 {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+
+        if result & 0b10000000 != 0 {
+            self.status_flags.set_flag(Flag::Negative, true);
+        } else {
+            self.status_flags.set_flag(Flag::Negative, false);
+        }
+
+        if value <= self.accumulator {
+            self.status_flags.set_flag(Flag::Carry, true);
+        } else {
+            self.status_flags.set_flag(Flag::Carry, false);
+        }
+    }
+
+    fn beq(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
+        let offset = self.memory[addr];
+        println!("DEBUG: addr = 0x{:#>04x}", addr as u8);
+        println!("DEBUG: offset = {}", offset as i8);
+        if self.status_flags.z {
+            let new_pc = self.program_counter + offset as u16;
+            self.program_counter = new_pc;
+            println!("DEBUG: new_pc = {}", new_pc as u16);
+        } else {
+            self.program_counter += 2;
+        }
+    }
+
+    fn inc(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
+        let value = self.memory[addr];
+        let new_value = value.wrapping_add(1);
+        self.memory[addr] = new_value;
+
+        if new_value == 0 {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+
+        if new_value & 0b10000000 != 0 {
+            self.status_flags.set_flag(Flag::Negative, true);
+        } else {
+            self.status_flags.set_flag(Flag::Negative, false);
+        }
+    }
+
+    fn inx(&mut self) {
+        let result: u8 = if self.x_index == 0xFF {
+            0
+        } else {
+            self.x_index + 1
+        };
+
+        self.x_index = result;
+
+        if result & 0b10000000 != 0 {
+            self.status_flags.set_flag(Flag::Negative, true);
+        } else {
+            self.status_flags.set_flag(Flag::Negative, false);
+        }
+
+        if result == 0 {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+    }
+
+    fn iny(&mut self) {
+        let result: u8 = if self.y_index == 0xFF {
+            0
+        } else {
+            self.y_index + 1
+        };
+
+        self.y_index = result;
+
+        if result & 0b10000000 != 0 {
+            self.status_flags.set_flag(Flag::Negative, true);
+        } else {
+            self.status_flags.set_flag(Flag::Negative, false);
+        }
+
+        if result == 0 {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+    }
+
+    fn push_stack(&mut self, value: u8) {
+        let stack_addr = 0x0100 | (self.stack_pointer as u16);
+        self.memory[stack_addr as usize] = value;
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+    }
+
+    fn pop_stack(&mut self) -> u8 {
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
+        let stack_addr = 0x100 | (self.stack_pointer as u16);
+        return self.memory[stack_addr as usize];
+    }
+
     pub fn run(&mut self) {
         let rvec: u16 = (self.memory[0xfffd] as u16) << 8 | self.memory[0xfffc] as u16;
         self.program_counter = rvec;
@@ -563,10 +789,19 @@ impl Cpu6502 {
                 "DEY" => self.dey(),
                 "JMP" => self.jmp(instruction.mode),
                 "NOP" => {}
+                "LDA" => self.lda(instruction.mode),
+                "STA" => self.sta(instruction.mode),
+                "JSR" => self.jsr(instruction.mode),
+                "RTS" => self.rts(),
+                "CMP" => self.cmp(instruction.mode),
+                "BEQ" => self.beq(instruction.mode),
+                "INC" => self.inc(instruction.mode),
+                "INX" => self.inx(),
+                "INY" => self.iny(),
                 _ => todo!("Add instruction {instruction_name} to run()"),
             }
             // increment program counter by instruction length
-            if instruction.instruction_name != "JMP" {
+            if !matches!(instruction_name, "JMP" | "JSR" | "RTS" | "BEQ") {
                 self.program_counter += instruction.instruction_byte_length as u16;
             }
         }
