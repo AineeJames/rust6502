@@ -1,6 +1,10 @@
 use clap::Parser;
 pub mod cpu6502;
 
+mod utils {
+    pub mod pause;
+}
+
 fn main() {
     let args: cpu6502::Args = cpu6502::Args::parse();
     env_logger::init();

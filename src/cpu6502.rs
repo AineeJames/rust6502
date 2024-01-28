@@ -1,8 +1,6 @@
-pub mod pause;
+use crate::utils::pause::pause_for_input;
 
 use clap::Parser;
-
-use self::pause::pauser::pause_for_input;
 
 use std::fs;
 use std::io;
@@ -105,19 +103,6 @@ pub struct Args {
     // Print all mem even if zeroed
     #[arg(short, long, default_value_t = false)]
     pub step_debug: bool,
-}
-
-fn pause() {
-    // pauses execution and waits for input
-    let mut stdin = io::stdin();
-    let mut stdout = io::stdout();
-
-    // We want the cursor to stay at the end of the line, so we print without a newline and flush manually.
-    write!(stdout, "Press any key to continue...").unwrap();
-    stdout.flush().unwrap();
-
-    // Read a single byte and discard
-    let _ = stdin.read(&mut [0u8]).unwrap();
 }
 
 // 7  bit  0
@@ -366,7 +351,7 @@ impl Cpu6502 {
             self.print_instruction(&instruction);
 
             if self.cmdline_args.step_debug {
-                pause();
+                pause_for_input();
             }
 
             let instruction_name = instruction.instruction_name.as_str();
