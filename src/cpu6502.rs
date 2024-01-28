@@ -1,10 +1,9 @@
 use crate::utils::pause::pause_for_input;
+use log::{debug, info};
 
 use clap::Parser;
 
 use std::fs;
-use std::io;
-use std::io::prelude::*;
 
 const MEM_SIZE: usize = 65536;
 
@@ -23,7 +22,7 @@ enum AddressingMode {
     AbsoluteIndirectY,
     ZeroPageX,
     ZeroPageY,
-    ZeroPageIndexedIndirect,
+    ZeroPageIndirectIndexedX,
     ZeroPageIndirectIndexedY,
 }
 
@@ -42,7 +41,7 @@ fn get_addressing_mode_operand_length(mode: AddressingMode) -> u8 {
         AddressingMode::AbsoluteIndirectY => 2,
         AddressingMode::ZeroPageX => 1,
         AddressingMode::ZeroPageY => 1,
-        AddressingMode::ZeroPageIndexedIndirect => 1,
+        AddressingMode::ZeroPageIndirectIndexedX => 1,
         AddressingMode::ZeroPageIndirectIndexedY => 1,
     }
 }
@@ -60,8 +59,8 @@ struct InstructionMetadata {
 impl InstructionMetadata {
     fn new(mode: AddressingMode, instruction_name: String) -> InstructionMetadata {
         InstructionMetadata {
-            mode: mode,
-            instruction_name: instruction_name,
+            mode,
+            instruction_name,
             instruction_byte_length: get_instruction_length(mode),
         }
     }
@@ -71,7 +70,20 @@ impl InstructionMetadata {
 fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
     match opcode {
         // ADC
+        0x69 => InstructionMetadata::new(AddressingMode::Immediate, String::from("ADC")),
         0x6d => InstructionMetadata::new(AddressingMode::Absolute, String::from("ADC")),
+        0x7d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("ADC")),
+        0x79 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("ADC")),
+        0x65 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("ADC")),
+        0x75 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("ADC")),
+        0x61 => InstructionMetadata::new(
+            AddressingMode::ZeroPageIndirectIndexedX,
+            String::from("ADC"),
+        ),
+        0x71 => InstructionMetadata::new(
+            AddressingMode::ZeroPageIndirectIndexedY,
+            String::from("ADC"),
+        ),
 
         // LDX
         0xa2 => InstructionMetadata::new(AddressingMode::Immediate, String::from("LDX")),
@@ -294,6 +306,14 @@ impl Cpu6502 {
                 "${:#>02x},Y",
                 self.get_addr(instruction.mode) - self.y_index as usize
             ),
+            AddressingMode::ZeroPageIndirectIndexedX => format!(
+                "$({:#>02x},X)",
+                self.get_addr(instruction.mode) - self.x_index as usize
+            ),
+            AddressingMode::ZeroPageIndirectIndexedY => format!(
+                "$({:#>02x},Y)",
+                self.get_addr(instruction.mode) - self.y_index as usize
+            ),
             _ => todo!(
                 "Add format for addressing mode {:?} in print_instruction()",
                 instruction.mode
@@ -325,6 +345,14 @@ impl Cpu6502 {
         return addr;
     }
 
+    fn get_zpg_indirect_addr(&mut self, index: Index) -> usize {
+        let addr = match index {
+            Index::X => self.memory[(self.program_counter + 1) as usize] + self.x_index as u8,
+            Index::Y => self.memory[(self.program_counter + 1) as usize] + self.y_index as u8,
+        };
+        addr as usize
+    }
+
     fn get_addr(&mut self, mode: AddressingMode) -> usize {
         let addr: usize = match mode {
             AddressingMode::Immediate => self.program_counter as usize + 1,
@@ -334,6 +362,8 @@ impl Cpu6502 {
             AddressingMode::ZeroPage => self.get_zpg_addr(None),
             AddressingMode::ZeroPageX => self.get_zpg_addr(Some(Index::X)),
             AddressingMode::ZeroPageY => self.get_zpg_addr(Some(Index::Y)),
+            AddressingMode::ZeroPageIndirectIndexedX => self.get_zpg_indirect_addr(Index::X),
+            AddressingMode::ZeroPageIndirectIndexedY => self.get_zpg_indirect_addr(Index::Y),
             _ => todo!("Mode not implemented in get_addr()"),
         };
         return addr;
@@ -456,28 +486,26 @@ impl Cpu6502 {
     }
 
     fn adc(&mut self, mode: AddressingMode) {
+        // TODO: Decimal mode if status register
+        // has decimal mode flag set need to treat
+        // hex as decimal for example 0x65 == 65
+        let addr = self.get_addr(mode);
+        debug!("Address being used to ADC {:#>04x}", addr);
         let carry_add = self.status_flags.c as u8;
-        match mode {
-            // when carry is set add 1
-            // warning decimal mode not implemented
-            AddressingMode::Immediate => {}
-            AddressingMode::Absolute => {
-                // get address
-                let ll = self.memory[(self.program_counter + 1) as usize] as usize;
-                let hh = self.memory[(self.program_counter + 2) as usize] as usize;
-                let addr = (hh << 8) | ll;
-
-                let mem_before_add: u16 = self.memory[addr as usize] as u16;
-                let sum = mem_before_add + self.accumulator as u16 + carry_add as u16;
-                if sum > 255 {
-                    self.accumulator = sum as u8;
-                    self.status_flags.c = true;
-                } else {
-                    self.accumulator = sum as u8;
-                }
-            }
-            _ => unreachable!(),
+        let mem_val: u16 = self.memory[addr as usize] as u16;
+        let overflow_flag_before_add: bool = (self.accumulator & (1 << 7)) == 1;
+        let sum = mem_val + self.accumulator as u16 + carry_add as u16;
+        self.accumulator = sum as u8;
+        if sum > 255 {
+            self.status_flags.set_flag(Flag::Carry, true);
+        } else {
+            self.status_flags.set_flag(Flag::Carry, false);
         }
-        self.status_flags.c = false;
+        let overflow_flag_after_add: bool = (self.accumulator & (1 << 7)) == 1;
+        if overflow_flag_before_add != overflow_flag_after_add {
+            self.status_flags.set_flag(Flag::Overflow, true);
+        } else {
+            self.status_flags.set_flag(Flag::Overflow, false);
+        }
     }
 }
