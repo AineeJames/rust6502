@@ -1,7 +1,7 @@
 use crate::utils::pause::pause_for_input;
 use clap::Parser;
 use log::{debug, info};
-use std::fs;
+use std::{fs, usize};
 
 const MEM_SIZE: usize = 65536;
 
@@ -129,6 +129,12 @@ fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         // DEY
         0x88 => InstructionMetadata::new(AddressingMode::Implied, String::from("DEY")),
 
+        // JMP
+        0x4c => InstructionMetadata::new(AddressingMode::Absolute, String::from("JMP")),
+        0x6c => InstructionMetadata::new(AddressingMode::AbsoluteIndirect, String::from("JMP")),
+
+        // NOP
+        0xea => InstructionMetadata::new(AddressingMode::Implied, String::from("NOP")),
         _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
     }
 }
@@ -305,6 +311,9 @@ impl Cpu6502 {
         let operand = match instruction.mode {
             AddressingMode::Implied => format!(""),
             AddressingMode::Absolute => format!("${:#>04x}", self.get_addr(instruction.mode)),
+            AddressingMode::AbsoluteIndirect => {
+                format!("(${:#>04x})", self.get_addr(AddressingMode::Absolute))
+            }
             AddressingMode::Immediate => {
                 let addr = self.get_addr(instruction.mode);
                 format!("#${:#>02x}", self.memory[addr])
@@ -365,11 +374,24 @@ impl Cpu6502 {
         addr as usize
     }
 
+    fn get_abs_indirect_addr(&mut self) -> usize {
+        let mem_addr = self.get_abs_addr();
+        let ll = self.memory[mem_addr] as usize;
+        let hh = if (mem_addr & 0xFF) == 0xFF {
+            self.memory[mem_addr & 0xFF00] as usize
+        } else {
+            self.memory[mem_addr + 1] as usize
+        };
+        let addr = (hh << 8) | ll;
+        return addr;
+    }
+
     fn get_addr(&mut self, mode: AddressingMode) -> usize {
         let addr: usize = match mode {
             AddressingMode::Implied => 0,
             AddressingMode::Immediate => self.program_counter as usize + 1,
             AddressingMode::Absolute => self.get_abs_addr(),
+            AddressingMode::AbsoluteIndirect => self.get_abs_indirect_addr(),
             AddressingMode::AbsoluteXIndexed => self.get_abs_addr() + self.x_index as usize,
             AddressingMode::AbsoluteYIndexed => self.get_abs_addr() + self.y_index as usize,
             AddressingMode::ZeroPage => self.get_zpg_addr(None),
@@ -511,6 +533,11 @@ impl Cpu6502 {
         }
     }
 
+    fn jmp(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
+        self.program_counter = addr as u16
+    }
+
     pub fn run(&mut self) {
         let rvec: u16 = (self.memory[0xfffc] as u16) << 8 | self.memory[0xfffd] as u16;
         self.program_counter = rvec;
@@ -537,10 +564,14 @@ impl Cpu6502 {
                 "DEC" => self.dec(instruction.mode),
                 "DEX" => self.dex(),
                 "DEY" => self.dey(),
+                "JMP" => self.jmp(instruction.mode),
+                "NOP" => {}
                 _ => todo!("Add instruction {instruction_name} to run()"),
             }
             // increment program counter by instruction length
-            self.program_counter += instruction.instruction_byte_length as u16;
+            if instruction.instruction_name != "JMP" {
+                self.program_counter += instruction.instruction_byte_length as u16;
+            }
         }
     }
 
