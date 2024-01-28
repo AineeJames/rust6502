@@ -674,13 +674,13 @@ impl Cpu6502 {
 
     fn beq(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
-        let offset = self.memory[addr];
-        println!("DEBUG: addr = 0x{:#>04x}", addr as u8);
+        let offset = self.memory[addr] as i8;
+        println!("DEBUG: addr ({:?}) = 0x{:#>04x}", mode, addr as u8);
         println!("DEBUG: offset = {}", offset as i8);
         if self.status_flags.z {
-            let new_pc = self.program_counter + offset as u16;
+            let new_pc = self.program_counter + 2 + offset as u16;
             self.program_counter = new_pc;
-            println!("DEBUG: new_pc = {}", new_pc as u16);
+            println!("DEBUG: new_pc = 0x{:#>04x}", new_pc as u16);
         } else {
             self.program_counter += 2;
         }

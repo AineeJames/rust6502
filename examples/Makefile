@@ -1,5 +1,5 @@
-xy_index_test: xy_index_test.o
-	ld65 -o xy_index_test xy_index_test.o -C bios.cfg
+hello_world: hello_world.o
+	ld65 -o hello_world hello_world.o -C bios.cfg
 
-xy_index_test.o: xy_index_test.s
-	ca65 xy_index_test.s
+hello_world.o: hello_world.s
+	ca65 hello_world.s
