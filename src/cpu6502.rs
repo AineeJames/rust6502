@@ -80,10 +80,32 @@ fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         0xa6 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("LDX")),
         0xb6 => InstructionMetadata::new(AddressingMode::ZeroPageY, String::from("LDX")),
 
+        // LDY
+        0xa0 => InstructionMetadata::new(AddressingMode::Immediate, String::from("LDY")),
+        0xac => InstructionMetadata::new(AddressingMode::Absolute, String::from("LDY")),
+        0xbc => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("LDY")),
+        0xa4 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("LDY")),
+        0xb4 => InstructionMetadata::new(AddressingMode::ZeroPageY, String::from("LDY")),
+
         // STX
         0x8e => InstructionMetadata::new(AddressingMode::Absolute, String::from("STX")),
         0x86 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("STX")),
         0x96 => InstructionMetadata::new(AddressingMode::ZeroPageY, String::from("STX")),
+
+        // STY
+        0x8c => InstructionMetadata::new(AddressingMode::Absolute, String::from("STY")),
+        0x84 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("STY")),
+        0x94 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("STY")),
+
+        // CPX
+        0xe0 => InstructionMetadata::new(AddressingMode::Immediate, String::from("CPX")),
+        0xec => InstructionMetadata::new(AddressingMode::Absolute, String::from("CPX")),
+        0xe4 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("CPX")),
+
+        // CPY
+        0xc0 => InstructionMetadata::new(AddressingMode::Immediate, String::from("CPY")),
+        0xcc => InstructionMetadata::new(AddressingMode::Absolute, String::from("CPY")),
+        0xc4 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("CPY")),
         _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
     }
 }
@@ -334,10 +356,73 @@ impl Cpu6502 {
         }
     }
 
+    fn ldy(&mut self, mode: AddressingMode) {
+        // load from memory into y
+        let addr = self.get_addr(mode);
+        let val = self.memory[addr];
+        self.y_index = val;
+        if val == 0 {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+        if (val & 0b10000000) != 0 {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+    }
+
     fn stx(&mut self, mode: AddressingMode) {
         // store index x into memory
         let addr = self.get_addr(mode);
         self.memory[addr] = self.x_index;
+    }
+
+    fn sty(&mut self, mode: AddressingMode) {
+        // store index y into memory
+        let addr = self.get_addr(mode);
+        self.memory[addr] = self.y_index;
+    }
+
+    fn cpx(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
+        if self.x_index >= self.memory[addr] {
+            self.status_flags.set_flag(Flag::Carry, true);
+        }
+        if self.memory[addr] > self.x_index {
+            self.status_flags.set_flag(Flag::Carry, false);
+        }
+        if (self.x_index - self.memory[addr]) & 0b10000000 != 0 {
+            self.status_flags.set_flag(Flag::Negative, true);
+        } else {
+            self.status_flags.set_flag(Flag::Negative, false);
+        }
+        if self.x_index == self.memory[addr] {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+    }
+
+    fn cpy(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
+        if self.y_index >= self.memory[addr] {
+            self.status_flags.set_flag(Flag::Carry, true);
+        }
+        if self.memory[addr] > self.y_index {
+            self.status_flags.set_flag(Flag::Carry, false);
+        }
+        if (self.y_index - self.memory[addr]) & 0b10000000 != 0 {
+            self.status_flags.set_flag(Flag::Negative, true);
+        } else {
+            self.status_flags.set_flag(Flag::Negative, false);
+        }
+        if self.y_index == self.memory[addr] {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
     }
 
     pub fn run(&mut self) {
@@ -358,7 +443,11 @@ impl Cpu6502 {
             match instruction_name {
                 "ADC" => self.adc(instruction.mode),
                 "STX" => self.stx(instruction.mode),
+                "STY" => self.sty(instruction.mode),
                 "LDX" => self.ldx(instruction.mode),
+                "LDY" => self.ldy(instruction.mode),
+                "CPX" => self.cpx(instruction.mode),
+                "CPY" => self.cpy(instruction.mode),
                 _ => todo!("Add instruction {instruction_name} to run()"),
             }
             // increment program counter by instruction length
