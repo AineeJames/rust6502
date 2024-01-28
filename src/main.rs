@@ -204,6 +204,11 @@ fn init_cpu6502(args: Args) -> Cpu6502 {
     cpu
 }
 
+enum Index {
+    X,
+    Y,
+}
+
 impl Cpu6502 {
     fn set_accumulator(&mut self, newacc: u8) {
         self.accumulator = newacc;
@@ -276,26 +281,40 @@ impl Cpu6502 {
         }
     }
 
+    fn get_abs_addr(&self) -> usize {
+        let ll = self.memory[(self.program_counter + 1) as usize] as usize;
+        let hh = self.memory[(self.program_counter + 2) as usize] as usize;
+        let addr = (hh << 8) | ll;
+        return addr;
+    }
+
+    fn get_zpg_addr(&mut self, index: Option<Index>) -> usize {
+        let addr = match index {
+            Some(Index::X) => {
+                self.x_index as usize + self.memory[(self.program_counter + 1) as usize] as usize
+            }
+            Some(Index::Y) => {
+                self.y_index as usize + self.memory[(self.program_counter + 1) as usize] as usize
+            }
+            None => self.memory[(self.program_counter + 1) as usize] as usize,
+        };
+        return addr;
+    }
+
+    fn get_addr(&mut self, mode: AddressingMode) -> usize {
+        let addr: usize = match mode {
+            AddressingMode::Absolute => self.get_abs_addr(),
+            AddressingMode::ZeroPage => self.get_zpg_addr(None),
+            AddressingMode::ZeroPageY => self.get_zpg_addr(Some(Index::Y)),
+            _ => todo!("Mode not implemented in get_addr()"),
+        };
+        return addr;
+    }
+
     fn stx(&mut self, mode: AddressingMode) {
         // store index x into memory
-        match mode {
-            AddressingMode::Absolute => {
-                let ll = self.memory[(self.program_counter + 1) as usize] as usize;
-                let hh = self.memory[(self.program_counter + 2) as usize] as usize;
-                let addr = (hh << 8) | ll;
-                self.memory[addr] = self.x_index;
-            }
-            AddressingMode::ZeroPage => {
-                let addr = self.memory[(self.program_counter + 1) as usize] as usize;
-                self.memory[addr] = self.x_index;
-            }
-            AddressingMode::ZeroPageY => {
-                let mut addr = self.memory[(self.program_counter + 1) as usize] as usize;
-                addr += self.y_index as usize;
-                self.memory[addr] = self.x_index;
-            }
-            _ => unreachable!(),
-        };
+        let addr = self.get_addr(mode);
+        self.memory[addr] = self.x_index;
     }
 
     fn run(&mut self) {
