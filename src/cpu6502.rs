@@ -1,8 +1,6 @@
 use crate::utils::pause::pause_for_input;
-use log::{debug, info};
-
 use clap::Parser;
-
+use log::{debug, info};
 use std::fs;
 
 const MEM_SIZE: usize = 65536;
@@ -29,7 +27,7 @@ enum AddressingMode {
 fn get_addressing_mode_operand_length(mode: AddressingMode) -> u8 {
     match mode {
         AddressingMode::Accumulator => 0,
-        AddressingMode::Implied => 1,
+        AddressingMode::Implied => 0,
         AddressingMode::Immediate => 1,
         AddressingMode::Absolute => 2,
         AddressingMode::AbsoluteXIndexed => 2,
@@ -118,6 +116,19 @@ fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         0xc0 => InstructionMetadata::new(AddressingMode::Immediate, String::from("CPY")),
         0xcc => InstructionMetadata::new(AddressingMode::Absolute, String::from("CPY")),
         0xc4 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("CPY")),
+
+        // DEC
+        0xce => InstructionMetadata::new(AddressingMode::Absolute, String::from("DEC")),
+        0xde => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("DEC")),
+        0xc6 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("DEC")),
+        0xd6 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("DEC")),
+
+        // DEX
+        0xca => InstructionMetadata::new(AddressingMode::Implied, String::from("DEX")),
+
+        // DEY
+        0x88 => InstructionMetadata::new(AddressingMode::Implied, String::from("DEY")),
+
         _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
     }
 }
@@ -292,6 +303,7 @@ impl Cpu6502 {
     fn print_instruction(&mut self, instruction: &InstructionMetadata) {
         // STX (ZeroPageY) operand
         let operand = match instruction.mode {
+            AddressingMode::Implied => format!(""),
             AddressingMode::Absolute => format!("${:#>04x}", self.get_addr(instruction.mode)),
             AddressingMode::Immediate => {
                 let addr = self.get_addr(instruction.mode);
@@ -355,6 +367,7 @@ impl Cpu6502 {
 
     fn get_addr(&mut self, mode: AddressingMode) -> usize {
         let addr: usize = match mode {
+            AddressingMode::Implied => 0,
             AddressingMode::Immediate => self.program_counter as usize + 1,
             AddressingMode::Absolute => self.get_abs_addr(),
             AddressingMode::AbsoluteXIndexed => self.get_abs_addr() + self.x_index as usize,
@@ -455,6 +468,49 @@ impl Cpu6502 {
         }
     }
 
+    fn dec(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
+        self.memory[addr] -= 1;
+        if (self.memory[addr]) & 0b10000000 != 0 {
+            self.status_flags.set_flag(Flag::Negative, true);
+        } else {
+            self.status_flags.set_flag(Flag::Negative, false);
+        }
+        if self.memory[addr] == 0 {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+    }
+
+    fn dex(&mut self) {
+        self.x_index -= 1;
+        if (self.x_index) & 0b10000000 != 0 {
+            self.status_flags.set_flag(Flag::Negative, true);
+        } else {
+            self.status_flags.set_flag(Flag::Negative, false);
+        }
+        if self.x_index == 0 {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+    }
+
+    fn dey(&mut self) {
+        self.y_index -= 1;
+        if (self.y_index) & 0b10000000 != 0 {
+            self.status_flags.set_flag(Flag::Negative, true);
+        } else {
+            self.status_flags.set_flag(Flag::Negative, false);
+        }
+        if self.y_index == 0 {
+            self.status_flags.set_flag(Flag::Zero, true);
+        } else {
+            self.status_flags.set_flag(Flag::Zero, false);
+        }
+    }
+
     pub fn run(&mut self) {
         let rvec: u16 = (self.memory[0xfffc] as u16) << 8 | self.memory[0xfffd] as u16;
         self.program_counter = rvec;
@@ -478,6 +534,9 @@ impl Cpu6502 {
                 "LDY" => self.ldy(instruction.mode),
                 "CPX" => self.cpx(instruction.mode),
                 "CPY" => self.cpy(instruction.mode),
+                "DEC" => self.dec(instruction.mode),
+                "DEX" => self.dex(),
+                "DEY" => self.dey(),
                 _ => todo!("Add instruction {instruction_name} to run()"),
             }
             // increment program counter by instruction length
