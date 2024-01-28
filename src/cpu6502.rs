@@ -71,6 +71,7 @@ impl InstructionMetadata {
 fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
     match opcode {
         // ADC
+        0x69 => InstructionMetadata::new(AddressingMode::Immediate, String::from("ADC")),
         0x6d => InstructionMetadata::new(AddressingMode::Absolute, String::from("ADC")),
 
         // LDX
@@ -367,27 +368,15 @@ impl Cpu6502 {
     }
 
     fn adc(&mut self, mode: AddressingMode) {
+        let addr = self.get_addr(mode);
         let carry_add = self.status_flags.c as u8;
-        match mode {
-            // when carry is set add 1
-            // warning decimal mode not implemented
-            AddressingMode::Immediate => {}
-            AddressingMode::Absolute => {
-                // get address
-                let ll = self.memory[(self.program_counter + 1) as usize] as usize;
-                let hh = self.memory[(self.program_counter + 2) as usize] as usize;
-                let addr = (hh << 8) | ll;
-
-                let mem_before_add: u16 = self.memory[addr as usize] as u16;
-                let sum = mem_before_add + self.accumulator as u16 + carry_add as u16;
-                if sum > 255 {
-                    self.accumulator = sum as u8;
-                    self.status_flags.c = true;
-                } else {
-                    self.accumulator = sum as u8;
-                }
-            }
-            _ => unreachable!(),
+        let mem_before_add: u16 = self.memory[addr as usize] as u16;
+        let sum = mem_before_add + self.accumulator as u16 + carry_add as u16;
+        if sum > 255 {
+            self.accumulator = sum as u8;
+            self.status_flags.c = true;
+        } else {
+            self.accumulator = sum as u8;
         }
         self.status_flags.c = false;
     }
