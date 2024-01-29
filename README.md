@@ -3,7 +3,7 @@
 Run:
 
 ```shell
-cargo run -- -b examples/xy_index_test.bin -s
+cargo run -- -b examples/hello_world -n
 ```
 
 To Implement:
