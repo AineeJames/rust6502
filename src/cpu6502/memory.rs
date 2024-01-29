@@ -1,5 +1,3 @@
-use std::u16;
-
 use crate::cpu6502::MEM_SIZE;
 
 enum MemMap {

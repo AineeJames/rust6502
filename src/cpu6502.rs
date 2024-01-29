@@ -1,6 +1,7 @@
 use crate::utils::pause::pause_for_input;
 use clap::Parser;
-use log::{debug, info};
+use log::debug;
+use std::time::{Duration, Instant};
 use std::{fs, usize};
 pub mod memory;
 
@@ -228,6 +229,10 @@ pub struct Args {
     // No printing of cpu regs, mem, etc...
     #[arg(short, long, default_value_t = false)]
     pub no_print: bool,
+
+    // Print instructions per second
+    #[arg(short, long, default_value_t = false)]
+    pub instrumentation: bool,
 }
 
 // 7  bit  0
@@ -253,7 +258,7 @@ enum Flag {
     Carry,
 }
 
-struct StatusFlags {
+pub struct StatusFlags {
     n: bool,
     v: bool,
     u: bool,
@@ -300,10 +305,14 @@ pub struct Cpu6502 {
     pub stack_pointer: u8,
     pub status_flags: StatusFlags,
     pub cmdline_args: Args,
+    pub start_time: Instant,
+    pub instructions_executed: usize,
 }
 
 pub fn init_cpu6502(args: Args) -> Cpu6502 {
-    let mut cpu = Cpu6502 {
+    let cpu = Cpu6502 {
+        instructions_executed: 0,
+        start_time: Instant::now(),
         cmdline_args: args,
         memory: memory::Mem::init_mem(),
         accumulator: 0,
@@ -715,6 +724,18 @@ impl Cpu6502 {
             // increment program counter by instruction length
             if !matches!(instruction_name, "JMP" | "JSR" | "RTS" | "BEQ") {
                 self.program_counter += instruction.instruction_byte_length as u16;
+            }
+
+            self.instructions_executed += 1;
+            if self.cmdline_args.instrumentation && (self.instructions_executed % 10000 == 0) {
+                let duration = self.start_time.elapsed().as_nanos();
+                // we have been executing for this long
+                let instructions_per_second =
+                    (self.instructions_executed * 1_000_000_000) as u128 / (duration as u128);
+                println!(
+                    "Currently executing at {:?} instructions per second",
+                    instructions_per_second
+                );
             }
         }
     }
