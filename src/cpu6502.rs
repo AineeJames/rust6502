@@ -283,6 +283,9 @@ impl StatusFlags {
     }
 }
 
+// TODO: add time counter ticks runningt
+// counter of instructions ran to output
+// instructions per second
 pub struct Cpu6502 {
     pub memory: memory::Mem,
     pub accumulator: u8,
