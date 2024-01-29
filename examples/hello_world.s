@@ -1,24 +1,23 @@
 .setcpu "6502"
 
-.segment "DATA"
+.define CHOUT $FF00
 
+.segment "DATA"
 hello: 
   .asciiz "Hello, World!"
-
 index:
   .byte $00
 
 .segment "CODE"
+LDX #<hello   ; load low addr of hello in x
+LDY #>hello   ; load high addr of hello in a
 
-LDX #<hello ; load low addr of hello in x
-LDY #>hello  ; load high addr of hello in a
+LDA #$00      ; clear accum
+LDX #$00      ; store x w/ 0
+STX index     ; clear index
+JSR print     ; jump to print subroutine
 
-LDA #$00    ; clear accum
-LDX #$00    ; store x w/ 0
-STX index   ; clear index
-JSR print   ; jump to print subroutine
-
-JMP $0600   ; jump to org and rerun
+JMP $0600     ; jump to org and rerun
 
 print:
   LDA index
@@ -26,7 +25,7 @@ print:
   BEQ done    ; if eq you are done
   LDX index   ; laod index to x
   LDA hello,X ; load string addr index by index
-  STA $6969   ; TODO: put char somewhere
+  STA CHOUT   ; TODO: put char somewhere
   INC index   ; inc index
   JMP print   ; restart the char print
 
