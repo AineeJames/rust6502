@@ -21,7 +21,7 @@ space:
 newline:
   .byte $0A, $00
 counter:
-  .byte $65 ; start at 101 for testing
+  .byte $01 ; start at 101 for testing
 
 .segment "CODE"
 
@@ -70,7 +70,7 @@ printcounter:
   clc
   jsr print_100s_place
   ;if a > 100 -100
-  ;jsr print_10s_place
+  jsr print_10s_place
   ;if a > 10 -10
   ;jsr print_1s_place
 
@@ -113,6 +113,35 @@ print_100s_end:
   TSX
   rts
 
+print_10s_place:
+  txs
+  cmp #100
+  beq print_10s_end
+  ldx #0
+  let_10s_flow:
+  sbc #100
+  bcs stop_10s_flow
+  bne not_zero_10s
+  inx 
+  jmp stop_10s_flow
+  not_zero_10s:
+  inx
+  cmp #10
+  bne let_10s_flow
+
+stop_10s_flow:
+  TXA
+  clc
+  adc #$30
+  sta CHOUT
+  
+  jmp print_10s_end
+
+
+
+print_10s_end:
+  TSX
+  rts
 
 print:
   lda $00,X
