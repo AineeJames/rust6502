@@ -71,7 +71,6 @@ printcounter:
   jsr print_100s_place
   ;if a > 100 -100
   ;need to subtract to just tens here
-  lda counter
   clc
   jsr print_10s_place
   ;if a > 10 -10
@@ -112,6 +111,23 @@ stop_code_flow:
   adc #$30
   sta CHOUT
   
+  TXA 
+  cmp #0
+  bne skip_counter_assignment
+
+  lda counter
+  jmp print_100s_end
+
+  skip_counter_assignment:
+
+  sub_100s_loop:
+  sbc #100
+  dex
+  beq print_100s_end
+  jmp sub_100s_loop
+
+
+
   jmp print_100s_end
   ;popx
 
@@ -122,7 +138,7 @@ print_100s_end:
 print_10s_place:
   txs
   cmp #10
-  beq print_10s_end
+  beq stop_10s_flow
   ldx #0
   let_10s_flow:
   sbc #10
