@@ -220,9 +220,13 @@ pub struct Args {
     #[arg(short, long, default_value_t = false)]
     pub print_all_mem: bool,
 
-    // Print all mem even if zeroed
+    // Step through program
     #[arg(short, long, default_value_t = false)]
     pub step_debug: bool,
+
+    // No printing of cpu regs, mem, etc...
+    #[arg(short, long, default_value_t = false)]
+    pub no_print: bool,
 }
 
 // 7  bit  0
@@ -325,6 +329,9 @@ enum Index {
 
 impl Cpu6502 {
     pub fn print_state(&self) {
+        if self.cmdline_args.no_print {
+            return;
+        }
         self.status_flags.print_status_flags_readable();
         println!("X register = 0x{:#>02x}", self.x_index);
         println!("Y register = 0x{:#>02x}", self.y_index);
@@ -351,6 +358,10 @@ impl Cpu6502 {
 
     fn print_instruction(&mut self, instruction: &InstructionMetadata) {
         // STX (ZeroPageY) operand
+        if self.cmdline_args.no_print {
+            return;
+        }
+
         let operand = match instruction.mode {
             AddressingMode::AbsoluteXIndexed => format!(
                 "${:#>04x},X",
@@ -664,7 +675,6 @@ impl Cpu6502 {
         self.program_counter = rvec;
         loop {
             self.print_state();
-
             let cur_opcode = self.get_next_byte();
             let instruction: InstructionMetadata = get_opcode_metadata(cur_opcode);
             self.print_instruction(&instruction);
