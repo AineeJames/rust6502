@@ -69,8 +69,8 @@ printcounter:
   lda counter
   clc
   jsr print_100s_place
-  jsr print_10s_place
-  jsr print_1s_place
+  ;jsr print_10s_place
+  ;jsr print_1s_place
 
   adc #$30 ; numb as char
   sta CHOUT

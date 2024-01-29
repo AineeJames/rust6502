@@ -18,9 +18,21 @@ pub enum Instruction {
     RTS,
     CMP,
     BEQ,
+    BNE,
     INC,
     INX,
     INY,
+    TXS,
+    TXA,
+    TYA,
+    TSX,
+    CLC,
+    CLD,
+    CLI,
+    CLV,
+    SEC,
+    SED,
+    SEI,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -201,6 +213,9 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         // BEQ
         0xf0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BEQ),
 
+        // BNE
+        0xd0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BNE),
+
         // INC
         0xee => InstructionMetadata::new(AddressingMode::Absolute, Instruction::INC),
         0xfe => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::INC),
@@ -212,6 +227,39 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
 
         // INY
         0xc8 => InstructionMetadata::new(AddressingMode::Implied, Instruction::INY),
+
+        // TXS
+        0x9a => InstructionMetadata::new(AddressingMode::Implied, Instruction::TXS),
+
+        // TXA
+        0x8a => InstructionMetadata::new(AddressingMode::Implied, Instruction::TXA),
+
+        // TSX
+        0xba => InstructionMetadata::new(AddressingMode::Implied, Instruction::TSX),
+
+        // TYA
+        0x98 => InstructionMetadata::new(AddressingMode::Implied, Instruction::TYA),
+
+        // CLC
+        0x18 => InstructionMetadata::new(AddressingMode::Implied, Instruction::CLC),
+
+        // CLD
+        0xd8 => InstructionMetadata::new(AddressingMode::Implied, Instruction::CLD),
+
+        // CLI
+        0x58 => InstructionMetadata::new(AddressingMode::Implied, Instruction::CLI),
+
+        // CLV
+        0xb8 => InstructionMetadata::new(AddressingMode::Implied, Instruction::CLV),
+
+        // SEC
+        0x38 => InstructionMetadata::new(AddressingMode::Implied, Instruction::SEC),
+
+        // SED
+        0xf8 => InstructionMetadata::new(AddressingMode::Implied, Instruction::SED),
+
+        // SEI
+        0x78 => InstructionMetadata::new(AddressingMode::Implied, Instruction::SEI),
         _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
     }
 }

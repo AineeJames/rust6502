@@ -417,6 +417,17 @@ impl Cpu6502 {
         }
     }
 
+    fn bne(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        let offset = self.memory.get_byte(addr) as i8;
+        if !self.status_flags.z {
+            let new_pc = self.program_counter + 2 + offset as u16;
+            self.program_counter = new_pc;
+        } else {
+            self.program_counter += 2;
+        }
+    }
+
     fn inc(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         let value = self.memory.get_byte(addr);
@@ -457,6 +468,43 @@ impl Cpu6502 {
             .set_flag(status_reg::Flag::Negative, result & 0b10000000 != 0);
         self.status_flags
             .set_flag(status_reg::Flag::Zero, result == 0);
+    }
+
+    fn txa(&mut self) {
+        self.accumulator = self.x_index;
+        self.status_flags.set_flag(
+            status_reg::Flag::Negative,
+            self.accumulator & 0b10000000 != 0,
+        );
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, self.accumulator == 0)
+    }
+
+    fn tya(&mut self) {
+        self.accumulator = self.y_index;
+        self.status_flags.set_flag(
+            status_reg::Flag::Negative,
+            self.accumulator & 0b10000000 != 0,
+        );
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, self.accumulator == 0)
+    }
+
+    fn txs(&mut self) {
+        self.push_stack(self.x_index);
+    }
+
+    fn tsx(&mut self) {
+        let prev_x = self.x_index;
+        self.x_index = self.pop_stack();
+
+        self.status_flags
+            .set_flag(status_reg::Flag::Negative, self.x_index & 0b10000000 != 0);
+
+        self.status_flags.set_flag(
+            status_reg::Flag::Zero,
+            self.x_index != prev_x && self.x_index == 0,
+        )
     }
 
     fn push_stack(&mut self, value: u8) {
@@ -505,9 +553,35 @@ impl Cpu6502 {
                 operation::Instruction::RTS => self.rts(),
                 operation::Instruction::CMP => self.cmp(instruction.mode),
                 operation::Instruction::BEQ => self.beq(instruction.mode),
+                operation::Instruction::BNE => self.bne(instruction.mode),
                 operation::Instruction::INC => self.inc(instruction.mode),
                 operation::Instruction::INX => self.inx(),
                 operation::Instruction::INY => self.iny(),
+                operation::Instruction::TXS => self.txs(),
+                operation::Instruction::TSX => self.tsx(),
+                operation::Instruction::TXA => self.txa(),
+                operation::Instruction::TYA => self.tya(),
+                operation::Instruction::CLC => {
+                    self.status_flags.set_flag(status_reg::Flag::Carry, false)
+                }
+                operation::Instruction::CLD => self
+                    .status_flags
+                    .set_flag(status_reg::Flag::DecimalMode, false),
+                operation::Instruction::CLI => self
+                    .status_flags
+                    .set_flag(status_reg::Flag::Interrupt, false),
+                operation::Instruction::CLV => self
+                    .status_flags
+                    .set_flag(status_reg::Flag::Overflow, false),
+                operation::Instruction::SEC => {
+                    self.status_flags.set_flag(status_reg::Flag::Carry, true)
+                }
+                operation::Instruction::SED => self
+                    .status_flags
+                    .set_flag(status_reg::Flag::DecimalMode, true),
+                operation::Instruction::SEI => self
+                    .status_flags
+                    .set_flag(status_reg::Flag::Interrupt, true),
                 _ => todo!(
                     "Add instruction {:?} to run()",
                     instruction.instruction_type
