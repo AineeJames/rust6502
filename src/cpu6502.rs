@@ -366,7 +366,7 @@ impl Cpu6502 {
             }
             AddressingMode::Immediate => {
                 let addr = self.get_addr(instruction.mode);
-                format!("#${:#>02x}", self.memory[addr])
+                format!("#${:#>02x}", self.memory.get_byte(addr))
             }
             AddressingMode::ZeroPage => format!("${:#>02x}", self.get_addr(instruction.mode)),
             AddressingMode::ZeroPageX => format!(
@@ -397,8 +397,8 @@ impl Cpu6502 {
     }
 
     fn get_abs_addr(&self) -> usize {
-        let ll = self.memory[(self.program_counter + 1) as usize] as usize;
-        let hh = self.memory[(self.program_counter + 2) as usize] as usize;
+        let ll = self.memory.get_byte((self.program_counter + 1) as usize) as usize;
+        let hh = self.memory.get_byte((self.program_counter + 2) as usize) as usize;
         let addr = (hh << 8) | ll;
         return addr;
     }
@@ -406,31 +406,37 @@ impl Cpu6502 {
     fn get_zpg_addr(&mut self, index: Option<Index>) -> usize {
         let addr = match index {
             Some(Index::X) => {
-                self.x_index as usize + self.memory[(self.program_counter + 1) as usize] as usize
+                self.x_index as usize
+                    + self.memory.get_byte((self.program_counter + 1) as usize) as usize
             }
             Some(Index::Y) => {
-                self.y_index as usize + self.memory[(self.program_counter + 1) as usize] as usize
+                self.y_index as usize
+                    + self.memory.get_byte((self.program_counter + 1) as usize) as usize
             }
-            None => self.memory[(self.program_counter + 1) as usize] as usize,
+            None => self.memory.get_byte((self.program_counter + 1) as usize) as usize,
         };
         return addr;
     }
 
     fn get_zpg_indirect_addr(&mut self, index: Index) -> usize {
         let addr = match index {
-            Index::X => self.memory[(self.program_counter + 1) as usize] + self.x_index as u8,
-            Index::Y => self.memory[(self.program_counter + 1) as usize] + self.y_index as u8,
+            Index::X => {
+                self.memory.get_byte((self.program_counter + 1) as usize) + self.x_index as u8
+            }
+            Index::Y => {
+                self.memory.get_byte((self.program_counter + 1) as usize) + self.y_index as u8
+            }
         };
         addr as usize
     }
 
     fn get_abs_indirect_addr(&mut self) -> usize {
         let mem_addr = self.get_abs_addr();
-        let ll = self.memory[mem_addr] as usize;
+        let ll = self.memory.get_byte(mem_addr) as usize;
         let hh = if (mem_addr & 0xFF) == 0xFF {
-            self.memory[mem_addr & 0xFF00] as usize
+            self.memory.get_byte(mem_addr & 0xFF00) as usize
         } else {
-            self.memory[mem_addr + 1] as usize
+            self.memory.get_byte(mem_addr + 1) as usize
         };
         let addr = (hh << 8) | ll;
         return addr;
@@ -458,7 +464,7 @@ impl Cpu6502 {
     fn ldx(&mut self, mode: AddressingMode) {
         // load from memory into x
         let addr = self.get_addr(mode);
-        let val = self.memory[addr];
+        let val = self.memory.get_byte(addr);
         self.x_index = val;
         self.status_flags.set_flag(Flag::Zero, val == 0);
         self.status_flags
@@ -468,7 +474,7 @@ impl Cpu6502 {
     fn ldy(&mut self, mode: AddressingMode) {
         // load from memory into y
         let addr = self.get_addr(mode);
-        let val = self.memory[addr];
+        let val = self.memory.get_byte(addr);
         self.y_index = val;
         self.status_flags.set_flag(Flag::Zero, val == 0);
         self.status_flags
@@ -478,54 +484,54 @@ impl Cpu6502 {
     fn stx(&mut self, mode: AddressingMode) {
         // store index x into memory
         let addr = self.get_addr(mode);
-        self.memory[addr] = self.x_index;
+        self.memory.set_byte(addr, self.x_index);
     }
 
     fn sty(&mut self, mode: AddressingMode) {
         // store index y into memory
         let addr = self.get_addr(mode);
-        self.memory[addr] = self.y_index;
+        self.memory.set_byte(addr, self.y_index);
     }
 
     fn cpx(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
-        if self.x_index >= self.memory[addr] {
+        if self.x_index >= self.memory.get_byte(addr) {
             self.status_flags.set_flag(Flag::Carry, true);
         }
-        if self.memory[addr] > self.x_index {
+        if self.memory.get_byte(addr) > self.x_index {
             self.status_flags.set_flag(Flag::Carry, false);
         }
         self.status_flags.set_flag(
             Flag::Negative,
-            (self.x_index - self.memory[addr]) & 0b1000000 != 0,
+            (self.x_index - self.memory.get_byte(addr)) & 0b1000000 != 0,
         );
         self.status_flags
-            .set_flag(Flag::Zero, self.x_index == self.memory[addr]);
+            .set_flag(Flag::Zero, self.x_index == self.memory.get_byte(addr));
     }
 
     fn cpy(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
-        if self.y_index >= self.memory[addr] {
+        if self.y_index >= self.memory.get_byte(addr) {
             self.status_flags.set_flag(Flag::Carry, true);
         }
-        if self.memory[addr] > self.y_index {
+        if self.memory.get_byte(addr) > self.y_index {
             self.status_flags.set_flag(Flag::Carry, false);
         }
         self.status_flags.set_flag(
             Flag::Negative,
-            (self.y_index - self.memory[addr]) & 0b1000000 != 0,
+            (self.y_index - self.memory.get_byte(addr)) & 0b1000000 != 0,
         );
         self.status_flags
-            .set_flag(Flag::Zero, self.y_index == self.memory[addr]);
+            .set_flag(Flag::Zero, self.y_index == self.memory.get_byte(addr));
     }
 
     fn dec(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
-        self.memory[addr] -= 1;
+        self.memory.decrement_mem(addr);
         self.status_flags
-            .set_flag(Flag::Negative, self.memory[addr] & 0b10000000 != 0);
+            .set_flag(Flag::Negative, self.memory.get_byte(addr) & 0b10000000 != 0);
         self.status_flags
-            .set_flag(Flag::Zero, self.memory[addr] == 0);
+            .set_flag(Flag::Zero, self.memory.get_byte(addr) == 0);
     }
 
     fn dex(&mut self) {
@@ -549,7 +555,7 @@ impl Cpu6502 {
 
     fn lda(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
-        self.accumulator = self.memory[addr];
+        self.accumulator = self.memory.get_byte(addr);
         self.status_flags
             .set_flag(Flag::Zero, self.accumulator == 0);
         self.status_flags
@@ -558,7 +564,7 @@ impl Cpu6502 {
 
     fn sta(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
-        self.memory[addr] = self.accumulator;
+        self.memory.set_byte(addr, self.accumulator);
     }
 
     fn jsr(&mut self, mode: AddressingMode) {
@@ -580,7 +586,7 @@ impl Cpu6502 {
 
     fn cmp(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
-        let value = self.memory[addr];
+        let value = self.memory.get_byte(addr);
         let result = self.accumulator.wrapping_sub(value);
 
         self.status_flags.set_flag(Flag::Zero, result == 0);
@@ -592,7 +598,7 @@ impl Cpu6502 {
 
     fn beq(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
-        let offset = self.memory[addr] as i8;
+        let offset = self.memory.get_byte(addr) as i8;
         if self.status_flags.z {
             let new_pc = self.program_counter + 2 + offset as u16;
             self.program_counter = new_pc;
@@ -603,9 +609,9 @@ impl Cpu6502 {
 
     fn inc(&mut self, mode: AddressingMode) {
         let addr = self.get_addr(mode);
-        let value = self.memory[addr];
+        let value = self.memory.get_byte(addr);
         let new_value = value.wrapping_add(1);
-        self.memory[addr] = new_value;
+        self.memory.set_byte(addr, new_value);
 
         self.status_flags.set_flag(Flag::Zero, new_value == 0);
         self.status_flags
@@ -642,18 +648,19 @@ impl Cpu6502 {
 
     fn push_stack(&mut self, value: u8) {
         let stack_addr = 0x0100 | (self.stack_pointer as u16);
-        self.memory[stack_addr as usize] = value;
+        self.memory.set_byte(stack_addr as usize, value);
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
     }
 
     fn pop_stack(&mut self) -> u8 {
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
         let stack_addr = 0x100 | (self.stack_pointer as u16);
-        return self.memory[stack_addr as usize];
+        return self.memory.get_byte(stack_addr as usize);
     }
 
     pub fn run(&mut self) {
-        let rvec: u16 = (self.memory[0xfffd] as u16) << 8 | self.memory[0xfffc] as u16;
+        let rvec: u16 =
+            (self.memory.get_byte(0xfffd) as u16) << 8 | self.memory.get_byte(0xfffc) as u16;
         self.program_counter = rvec;
         loop {
             self.print_state();
@@ -705,7 +712,7 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         debug!("Address being used to ADC {:#>04x}", addr);
         let carry_add = self.status_flags.c as u8;
-        let mem_val: u16 = self.memory[addr as usize] as u16;
+        let mem_val: u16 = self.memory.get_byte(addr as usize) as u16;
         let overflow_flag_before_add: bool = (self.accumulator & (1 << 7)) == 1;
         let sum = mem_val + self.accumulator as u16 + carry_add as u16;
         self.accumulator = sum as u8;

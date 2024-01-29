@@ -13,7 +13,7 @@ impl Mem {
             memory: vec![0; MEM_SIZE],
         }
     }
-    pub fn set_byte(mut self, index: u16, val: u8) {
+    pub fn set_byte(&mut self, index: usize, val: u8) {
         self.memory[index as usize] = val;
         // handle specific addrs
         match index {
@@ -28,11 +28,19 @@ impl Mem {
         }
     }
 
+    pub fn get_byte(&self, index: usize) -> u8 {
+        self.memory[index as usize]
+    }
+
     pub fn get(&self, index: usize) -> Option<&u8> {
         self.memory.get(index)
     }
 
-    pub fn dump_memory(self, print_all: bool) {
+    pub fn decrement_mem(&mut self, index: usize) {
+        self.set_byte(index, self.memory[index].wrapping_sub(1));
+    }
+
+    pub fn dump_memory(&self, print_all: bool) {
         for i in (0..MEM_SIZE).step_by(0x10) {
             let slice = &self.memory[i..i + 0x10];
 
@@ -54,7 +62,7 @@ impl Mem {
             }
         }
     }
-    pub fn set_all(mut self, new_mem: Vec<u8>) {
+    pub fn set_all(&mut self, new_mem: Vec<u8>) {
         self.memory = new_mem;
     }
 }

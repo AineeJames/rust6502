@@ -15,12 +15,5 @@ fn main() {
     let mut cpu: cpu6502::Cpu6502 = cpu6502::init_cpu6502(args);
 
     cpu.load_file_into_memory();
-    cpu.y_index += 1;
-    cpu.accumulator = 3;
-    cpu.memory[0x1234] = 1;
-    cpu.memory[0x6a] = 0x5;
     cpu.run();
-
-    cpu.dump_memory();
-    cpu.print_state();
 }
