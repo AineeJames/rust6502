@@ -1,5 +1,9 @@
 use crate::cpu6502::MEM_SIZE;
 
+enum MemMap {
+    CHROUT = 0xFF00,
+}
+
 pub struct Mem {
     memory: Vec<u8>,
 }
@@ -11,6 +15,17 @@ impl Mem {
     }
     pub fn set_byte(mut self, index: u16, val: u8) {
         self.memory[index as usize] = val;
+        // handle specific addrs
+        match index {
+            MemMap::CHROUT => {
+                if let Some(char) = char::from_u32(ascii_code) {
+                    print!("{}", char);
+                } else {
+                    print!("");
+                }
+            }
+            _ => {}
+        }
     }
 
     pub fn get(&self, index: usize) -> Option<&u8> {
