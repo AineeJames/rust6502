@@ -1,7 +1,19 @@
+use std::u16;
+
 use crate::cpu6502::MEM_SIZE;
 
 enum MemMap {
-    CHROUT = 0xFF00,
+    CHROUT,
+    NOMAP,
+}
+
+impl MemMap {
+    fn from_index(index: usize) -> MemMap {
+        match index {
+            0xFF00 => MemMap::CHROUT,
+            _ => MemMap::NOMAP,
+        }
+    }
 }
 
 pub struct Mem {
@@ -15,16 +27,15 @@ impl Mem {
     }
     pub fn set_byte(&mut self, index: usize, val: u8) {
         self.memory[index as usize] = val;
-        // handle specific addrs
-        match index {
+        match MemMap::from_index(index) {
             MemMap::CHROUT => {
-                if let Some(char) = char::from_u32(val) {
+                if let Some(char) = char::from_u32(val as u32) {
                     print!("{}", char);
                 } else {
                     print!("");
                 }
             }
-            _ => {}
+            MemMap::NOMAP => {}
         }
     }
 
