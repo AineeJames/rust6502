@@ -418,8 +418,6 @@ impl Cpu6502 {
     }
 
     fn bne(&mut self, mode: operation::AddressingMode) {
-        // TODO! why did i have to get rid of +2 to get correct
-        // address
         let addr = self.get_addr(mode);
         let offset = self.memory.get_byte(addr) as i8;
         if !self.status_flags.z {
