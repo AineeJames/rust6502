@@ -26,6 +26,32 @@ enum AddressingMode {
     ZeroPageIndirectIndexedY,
 }
 
+#[derive(Debug)]
+enum Instruction {
+    ADC,
+    LDX,
+    LDY,
+    STX,
+    STY,
+    CPX,
+    CPY,
+    DEC,
+    DEX,
+    DEY,
+    JMP,
+    NOP,
+    LDA,
+    STA,
+    JSR,
+    RST,
+    RTS,
+    CMP,
+    BEQ,
+    INC,
+    INX,
+    INY,
+}
+
 fn get_addressing_mode_operand_length(mode: AddressingMode) -> u8 {
     match mode {
         AddressingMode::Accumulator => 0,
@@ -52,15 +78,15 @@ fn get_instruction_length(mode: AddressingMode) -> u8 {
 
 struct InstructionMetadata {
     mode: AddressingMode,
-    instruction_name: String,
+    instruction_type: Instruction,
     instruction_byte_length: u8,
 }
 
 impl InstructionMetadata {
-    fn new(mode: AddressingMode, instruction_name: String) -> InstructionMetadata {
+    fn new(mode: AddressingMode, instruction: Instruction) -> InstructionMetadata {
         InstructionMetadata {
             mode,
-            instruction_name,
+            instruction_type: instruction,
             instruction_byte_length: get_instruction_length(mode),
         }
     }
@@ -71,141 +97,133 @@ impl InstructionMetadata {
 fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
     match opcode {
         // ADC
-        0x69 => InstructionMetadata::new(AddressingMode::Immediate, String::from("ADC")),
-        0x6d => InstructionMetadata::new(AddressingMode::Absolute, String::from("ADC")),
-        0x7d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("ADC")),
-        0x79 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("ADC")),
-        0x65 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("ADC")),
-        0x75 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("ADC")),
-        0x61 => InstructionMetadata::new(
-            AddressingMode::ZeroPageIndirectIndexedX,
-            String::from("ADC"),
-        ),
-        0x71 => InstructionMetadata::new(
-            AddressingMode::ZeroPageIndirectIndexedY,
-            String::from("ADC"),
-        ),
+        0x69 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::ADC),
+        0x6d => InstructionMetadata::new(AddressingMode::Absolute, Instruction::ADC),
+        0x7d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::ADC),
+        0x79 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::ADC),
+        0x65 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::ADC),
+        0x75 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::ADC),
+        0x61 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::ADC)
+        }
+        0x71 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::ADC)
+        }
 
         // LDX
-        0xa2 => InstructionMetadata::new(AddressingMode::Immediate, String::from("LDX")),
-        0xae => InstructionMetadata::new(AddressingMode::Absolute, String::from("LDX")),
-        0xbe => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("LDX")),
-        0xa6 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("LDX")),
-        0xb6 => InstructionMetadata::new(AddressingMode::ZeroPageY, String::from("LDX")),
+        0xa2 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::LDX),
+        0xae => InstructionMetadata::new(AddressingMode::Absolute, Instruction::LDX),
+        0xbe => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::LDX),
+        0xa6 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::LDX),
+        0xb6 => InstructionMetadata::new(AddressingMode::ZeroPageY, Instruction::LDX),
 
         // LDY
-        0xa0 => InstructionMetadata::new(AddressingMode::Immediate, String::from("LDY")),
-        0xac => InstructionMetadata::new(AddressingMode::Absolute, String::from("LDY")),
-        0xbc => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("LDY")),
-        0xa4 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("LDY")),
-        0xb4 => InstructionMetadata::new(AddressingMode::ZeroPageY, String::from("LDY")),
+        0xa0 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::LDY),
+        0xac => InstructionMetadata::new(AddressingMode::Absolute, Instruction::LDY),
+        0xbc => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::LDY),
+        0xa4 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::LDY),
+        0xb4 => InstructionMetadata::new(AddressingMode::ZeroPageY, Instruction::LDY),
 
         // STX
-        0x8e => InstructionMetadata::new(AddressingMode::Absolute, String::from("STX")),
-        0x86 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("STX")),
-        0x96 => InstructionMetadata::new(AddressingMode::ZeroPageY, String::from("STX")),
+        0x8e => InstructionMetadata::new(AddressingMode::Absolute, Instruction::STX),
+        0x86 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::STX),
+        0x96 => InstructionMetadata::new(AddressingMode::ZeroPageY, Instruction::STX),
 
         // STY
-        0x8c => InstructionMetadata::new(AddressingMode::Absolute, String::from("STY")),
-        0x84 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("STY")),
-        0x94 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("STY")),
+        0x8c => InstructionMetadata::new(AddressingMode::Absolute, Instruction::STY),
+        0x84 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::STY),
+        0x94 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::STY),
 
         // CPX
-        0xe0 => InstructionMetadata::new(AddressingMode::Immediate, String::from("CPX")),
-        0xec => InstructionMetadata::new(AddressingMode::Absolute, String::from("CPX")),
-        0xe4 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("CPX")),
+        0xe0 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::CPX),
+        0xec => InstructionMetadata::new(AddressingMode::Absolute, Instruction::CPX),
+        0xe4 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::CPX),
 
         // CPY
-        0xc0 => InstructionMetadata::new(AddressingMode::Immediate, String::from("CPY")),
-        0xcc => InstructionMetadata::new(AddressingMode::Absolute, String::from("CPY")),
-        0xc4 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("CPY")),
+        0xc0 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::CPY),
+        0xcc => InstructionMetadata::new(AddressingMode::Absolute, Instruction::CPY),
+        0xc4 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::CPY),
 
         // DEC
-        0xce => InstructionMetadata::new(AddressingMode::Absolute, String::from("DEC")),
-        0xde => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("DEC")),
-        0xc6 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("DEC")),
-        0xd6 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("DEC")),
+        0xce => InstructionMetadata::new(AddressingMode::Absolute, Instruction::DEC),
+        0xde => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::DEC),
+        0xc6 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::DEC),
+        0xd6 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::DEC),
 
         // DEX
-        0xca => InstructionMetadata::new(AddressingMode::Implied, String::from("DEX")),
+        0xca => InstructionMetadata::new(AddressingMode::Implied, Instruction::DEX),
 
         // DEY
-        0x88 => InstructionMetadata::new(AddressingMode::Implied, String::from("DEY")),
+        0x88 => InstructionMetadata::new(AddressingMode::Implied, Instruction::DEY),
 
         // JMP
-        0x4c => InstructionMetadata::new(AddressingMode::Absolute, String::from("JMP")),
-        0x6c => InstructionMetadata::new(AddressingMode::AbsoluteIndirect, String::from("JMP")),
+        0x4c => InstructionMetadata::new(AddressingMode::Absolute, Instruction::JMP),
+        0x6c => InstructionMetadata::new(AddressingMode::AbsoluteIndirect, Instruction::JMP),
 
         // NOP
-        0xea => InstructionMetadata::new(AddressingMode::Implied, String::from("NOP")),
+        0xea => InstructionMetadata::new(AddressingMode::Implied, Instruction::NOP),
 
         // LDA
-        0xa9 => InstructionMetadata::new(AddressingMode::Immediate, String::from("LDA")),
-        0xad => InstructionMetadata::new(AddressingMode::Absolute, String::from("LDA")),
-        0xbd => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("LDA")),
-        0xb9 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("LDA")),
-        0xa5 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("LDA")),
-        0xb5 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("LDA")),
-        0xa1 => InstructionMetadata::new(
-            AddressingMode::ZeroPageIndirectIndexedX,
-            String::from("LDA"),
-        ),
-        0xb1 => InstructionMetadata::new(
-            AddressingMode::ZeroPageIndirectIndexedY,
-            String::from("LDA"),
-        ),
+        0xa9 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::LDA),
+        0xad => InstructionMetadata::new(AddressingMode::Absolute, Instruction::LDA),
+        0xbd => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::LDA),
+        0xb9 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::LDA),
+        0xa5 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::LDA),
+        0xb5 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::LDA),
+        0xa1 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::LDA)
+        }
+        0xb1 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::LDA)
+        }
 
         // STA
-        0x8d => InstructionMetadata::new(AddressingMode::Absolute, String::from("STA")),
-        0x9d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("STA")),
-        0x99 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("STA")),
-        0x85 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("STA")),
-        0x95 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("STA")),
-        0x81 => InstructionMetadata::new(
-            AddressingMode::ZeroPageIndirectIndexedX,
-            String::from("STA"),
-        ),
-        0x91 => InstructionMetadata::new(
-            AddressingMode::ZeroPageIndirectIndexedY,
-            String::from("STA"),
-        ),
+        0x8d => InstructionMetadata::new(AddressingMode::Absolute, Instruction::STA),
+        0x9d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::STA),
+        0x99 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::STA),
+        0x85 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::STA),
+        0x95 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::STA),
+        0x81 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::STA)
+        }
+        0x91 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::STA)
+        }
 
         // JSR
-        0x20 => InstructionMetadata::new(AddressingMode::Absolute, String::from("JSR")),
+        0x20 => InstructionMetadata::new(AddressingMode::Absolute, Instruction::JSR),
 
         // RTS
-        0x60 => InstructionMetadata::new(AddressingMode::Implied, String::from("RTS")),
+        0x60 => InstructionMetadata::new(AddressingMode::Implied, Instruction::RTS),
 
         // CMP
-        0xc9 => InstructionMetadata::new(AddressingMode::Immediate, String::from("CMP")),
-        0xcd => InstructionMetadata::new(AddressingMode::Absolute, String::from("CMP")),
-        0xdd => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("CMP")),
-        0xd9 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, String::from("CMP")),
-        0xc5 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("CMP")),
-        0xd5 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("CMP")),
-        0xc1 => InstructionMetadata::new(
-            AddressingMode::ZeroPageIndirectIndexedX,
-            String::from("CMP"),
-        ),
-        0xd1 => InstructionMetadata::new(
-            AddressingMode::ZeroPageIndirectIndexedY,
-            String::from("CMP"),
-        ),
+        0xc9 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::CMP),
+        0xcd => InstructionMetadata::new(AddressingMode::Absolute, Instruction::CMP),
+        0xdd => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::CMP),
+        0xd9 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::CMP),
+        0xc5 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::CMP),
+        0xd5 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::CMP),
+        0xc1 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::CMP)
+        }
+        0xd1 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::CMP)
+        }
 
         // BEQ
-        0xf0 => InstructionMetadata::new(AddressingMode::Relative, String::from("BEQ")),
+        0xf0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BEQ),
 
         // INC
-        0xee => InstructionMetadata::new(AddressingMode::Absolute, String::from("INC")),
-        0xfe => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, String::from("INC")),
-        0xe6 => InstructionMetadata::new(AddressingMode::ZeroPage, String::from("INC")),
-        0xf6 => InstructionMetadata::new(AddressingMode::ZeroPageX, String::from("INC")),
+        0xee => InstructionMetadata::new(AddressingMode::Absolute, Instruction::INC),
+        0xfe => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::INC),
+        0xe6 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::INC),
+        0xf6 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::INC),
 
         // INX
-        0xe8 => InstructionMetadata::new(AddressingMode::Implied, String::from("INX")),
+        0xe8 => InstructionMetadata::new(AddressingMode::Implied, Instruction::INX),
 
         // INY
-        0xc8 => InstructionMetadata::new(AddressingMode::Implied, String::from("INY")),
+        0xc8 => InstructionMetadata::new(AddressingMode::Implied, Instruction::INY),
         _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
     }
 }
@@ -415,8 +433,8 @@ impl Cpu6502 {
             ),
         };
         println!(
-            "\nNEXT INSTRUCTION: {} {}",
-            instruction.instruction_name, operand
+            "\nNEXT INSTRUCTION: {:?} {}",
+            instruction.instruction_type, operand
         );
     }
 
@@ -696,33 +714,38 @@ impl Cpu6502 {
                 pause_for_input();
             }
 
-            let instruction_name = instruction.instruction_name.as_str();
-            match instruction_name {
-                "ADC" => self.adc(instruction.mode),
-                "STX" => self.stx(instruction.mode),
-                "STY" => self.sty(instruction.mode),
-                "LDX" => self.ldx(instruction.mode),
-                "LDY" => self.ldy(instruction.mode),
-                "CPX" => self.cpx(instruction.mode),
-                "CPY" => self.cpy(instruction.mode),
-                "DEC" => self.dec(instruction.mode),
-                "DEX" => self.dex(),
-                "DEY" => self.dey(),
-                "JMP" => self.jmp(instruction.mode),
-                "NOP" => {}
-                "LDA" => self.lda(instruction.mode),
-                "STA" => self.sta(instruction.mode),
-                "JSR" => self.jsr(instruction.mode),
-                "RTS" => self.rts(),
-                "CMP" => self.cmp(instruction.mode),
-                "BEQ" => self.beq(instruction.mode),
-                "INC" => self.inc(instruction.mode),
-                "INX" => self.inx(),
-                "INY" => self.iny(),
-                _ => todo!("Add instruction {instruction_name} to run()"),
+            match instruction.instruction_type {
+                Instruction::ADC => self.adc(instruction.mode),
+                Instruction::STX => self.stx(instruction.mode),
+                Instruction::STY => self.sty(instruction.mode),
+                Instruction::LDX => self.ldx(instruction.mode),
+                Instruction::LDY => self.ldy(instruction.mode),
+                Instruction::CPX => self.cpx(instruction.mode),
+                Instruction::CPY => self.cpy(instruction.mode),
+                Instruction::DEC => self.dec(instruction.mode),
+                Instruction::DEX => self.dex(),
+                Instruction::DEY => self.dey(),
+                Instruction::JMP => self.jmp(instruction.mode),
+                Instruction::NOP => {}
+                Instruction::LDA => self.lda(instruction.mode),
+                Instruction::STA => self.sta(instruction.mode),
+                Instruction::JSR => self.jsr(instruction.mode),
+                Instruction::RTS => self.rts(),
+                Instruction::CMP => self.cmp(instruction.mode),
+                Instruction::BEQ => self.beq(instruction.mode),
+                Instruction::INC => self.inc(instruction.mode),
+                Instruction::INX => self.inx(),
+                Instruction::INY => self.iny(),
+                _ => todo!(
+                    "Add instruction {:?} to run()",
+                    instruction.instruction_type
+                ),
             }
             // increment program counter by instruction length
-            if !matches!(instruction_name, "JMP" | "JSR" | "RTS" | "BEQ") {
+            if !matches!(
+                instruction.instruction_type,
+                Instruction::JMP | Instruction::JSR | Instruction::RTS | Instruction::BEQ
+            ) {
                 self.program_counter += instruction.instruction_byte_length as u16;
             }
 
