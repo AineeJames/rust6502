@@ -21,23 +21,23 @@ space:
 newline:
   .byte $0A, $00
 counter:
-  .byte $01
+  .byte $63 ; start at 99 for testing
 
 .segment "CODE"
 
 start:
 
   jsr printcounter
-  ldx #<space
-  jsr print
-  ldx #<fizzstr
-  jsr print
-  ldx #<space
-  jsr print
-  ldx #<buzzstr
-  jsr print
-  ldx #<newline
-  jsr print
+  ;ldx #<space
+  ;jsr print
+  ;ldx #<fizzstr
+  ;jsr print
+  ;ldx #<space
+  ;jsr print
+  ;ldx #<buzzstr
+  ;jsr print
+  ;ldx #<newline
+  ;jsr print
 
   ; inc counter and break out of loop if at max val
   inc counter
@@ -87,9 +87,16 @@ print_100s_place:
   ldx #0
   let_code_flow:  
   sbc #100
+  bcs stop_code_flow
+  bne not_zero
+  inx
+  jmp stop_code_flow
+  not_zero:
   inx
   cmp #100
   beq let_code_flow
+
+stop_code_flow:
 
   ;Get x to accumulator
   TXA 

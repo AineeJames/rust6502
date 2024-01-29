@@ -431,6 +431,18 @@ impl Cpu6502 {
         }
     }
 
+    fn bcs(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        let offset = self.memory.get_byte(addr) as i8;
+        if self.status_flags.c {
+            debug!("Taking bcs branch");
+            let new_pc = (self.program_counter).wrapping_add_signed(offset as i16);
+            self.program_counter = new_pc;
+        } else {
+            self.program_counter += 2
+        }
+    }
+
     fn inc(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         let value = self.memory.get_byte(addr);
@@ -514,7 +526,7 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         let value = self.memory.get_byte(addr);
         let acc_before_sub = self.accumulator;
-        self.accumulator.wrapping_sub(value);
+        self.accumulator = self.accumulator.wrapping_sub(value);
         // wrapped around
         self.status_flags
             .set_flag(status_reg::Flag::Carry, acc_before_sub < self.accumulator);
@@ -601,6 +613,7 @@ impl Cpu6502 {
                 operation::Instruction::SEI => self
                     .status_flags
                     .set_flag(status_reg::Flag::Interrupt, true),
+                operation::Instruction::BCS => self.bcs(instruction.mode),
                 _ => todo!(
                     "Add instruction {:?} to run()",
                     instruction.instruction_type
@@ -613,6 +626,7 @@ impl Cpu6502 {
                     | operation::Instruction::JSR
                     | operation::Instruction::RTS
                     | operation::Instruction::BEQ
+                    | operation::Instruction::BCS
             ) {
                 self.program_counter += instruction.instruction_byte_length as u16;
             }

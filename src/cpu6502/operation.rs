@@ -17,6 +17,7 @@ pub enum Instruction {
     JSR,
     RTS,
     CMP,
+    BCS,
     BEQ,
     BNE,
     INC,
@@ -210,6 +211,9 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         0xd1 => {
             InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::CMP)
         }
+
+        // BCS
+        0xb0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BCS),
 
         // BEQ
         0xf0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BEQ),
