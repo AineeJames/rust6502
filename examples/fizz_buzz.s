@@ -21,7 +21,7 @@ space:
 newline:
   .byte $0A, $00
 counter:
-  .byte $63 ; start at 99 for testing
+  .byte $65 ; start at 101 for testing
 
 .segment "CODE"
 
@@ -85,7 +85,7 @@ print_100s_place:
   TXS
 
   cmp #100 
-  bne print_100s_end
+  beq print_100s_end
   ldx #0
   let_code_flow:  
   sbc #100
@@ -102,6 +102,7 @@ stop_code_flow:
 
   ;Get x to accumulator
   TXA 
+  clc
   adc #$30
   sta CHOUT
   

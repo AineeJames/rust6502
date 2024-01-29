@@ -438,7 +438,7 @@ impl Cpu6502 {
         let offset = self.memory.get_byte(addr) as i8;
         if self.status_flags.c {
             debug!("Taking bcs branch");
-            let new_pc = (self.program_counter).wrapping_add_signed(offset as i16);
+            let new_pc = (self.program_counter + 2).wrapping_add_signed(offset as i16);
             self.program_counter = new_pc;
         } else {
             self.program_counter += 2
