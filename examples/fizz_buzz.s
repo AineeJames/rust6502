@@ -21,7 +21,7 @@ space:
 newline:
   .byte $0A, $00
 counter:
-  .byte $0b ; start at 11 for testing
+  .byte $01 ; start at 11 for testing
 
 .segment "CODE"
 
@@ -153,12 +153,12 @@ print_1s_place:
   txs
   ;acc has num to print
   cmp #10
-  bne stop_1s_flow
+  bcc stop_1s_flow
 
   sub_10s_loop:
   sbc #10
-  cmp #100
-  bne stop_1s_flow
+  cmp #10
+  bcc stop_1s_flow
   jmp sub_10s_loop
 
 stop_1s_flow:
