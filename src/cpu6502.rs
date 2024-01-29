@@ -410,7 +410,7 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         let offset = self.memory.get_byte(addr) as i8;
         if self.status_flags.z {
-            let new_pc = self.program_counter + 2 + offset as u16;
+            let new_pc = (self.program_counter + 2).wrapping_add_signed(offset as i16);
             self.program_counter = new_pc;
         } else {
             self.program_counter += 2;
@@ -418,10 +418,13 @@ impl Cpu6502 {
     }
 
     fn bne(&mut self, mode: operation::AddressingMode) {
+        // TODO! why did i have to get rid of +2 to get correct
+        // address
         let addr = self.get_addr(mode);
         let offset = self.memory.get_byte(addr) as i8;
         if !self.status_flags.z {
-            let new_pc = self.program_counter + 2 + offset as u16;
+            //let new_pc = self.program_counter + offset as u16;
+            let new_pc = (self.program_counter).wrapping_add_signed(offset as i16);
             self.program_counter = new_pc;
         } else {
             self.program_counter += 2;
@@ -507,6 +510,21 @@ impl Cpu6502 {
         )
     }
 
+    fn sbc(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        let value = self.memory.get_byte(addr);
+        let acc_before_sub = self.accumulator;
+        self.accumulator.wrapping_sub(value);
+        // wrapped around
+        self.status_flags
+            .set_flag(status_reg::Flag::Carry, acc_before_sub < self.accumulator);
+        self.status_flags
+            .set_flag(status_reg::Flag::Negative, self.accumulator & (1 << 7) != 0);
+        // TODO! dont know how to do overflow flag
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
+    }
+
     fn push_stack(&mut self, value: u8) {
         let stack_addr = 0x0100 | (self.stack_pointer as u16);
         self.memory.set_byte(stack_addr as usize, value);
@@ -549,6 +567,7 @@ impl Cpu6502 {
                 operation::Instruction::NOP => {}
                 operation::Instruction::LDA => self.lda(instruction.mode),
                 operation::Instruction::STA => self.sta(instruction.mode),
+                operation::Instruction::SBC => self.sbc(instruction.mode),
                 operation::Instruction::JSR => self.jsr(instruction.mode),
                 operation::Instruction::RTS => self.rts(),
                 operation::Instruction::CMP => self.cmp(instruction.mode),

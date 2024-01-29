@@ -72,8 +72,8 @@ printcounter:
   ;jsr print_10s_place
   ;jsr print_1s_place
 
-  adc #$30 ; numb as char
-  sta CHOUT
+  ;adc #$30 ; numb as char
+  ;sta CHOUT
 
 endprintcounter:
   rts
@@ -96,10 +96,11 @@ print_100s_place:
   adc #$30
   sta CHOUT
   
+  jmp print_100s_end
   ;popx
-  TSX
 
 print_100s_end:
+  TSX
   rts
 
 

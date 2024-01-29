@@ -33,6 +33,7 @@ pub enum Instruction {
     SEC,
     SED,
     SEI,
+    SBC,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -251,6 +252,20 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
 
         // CLV
         0xb8 => InstructionMetadata::new(AddressingMode::Implied, Instruction::CLV),
+
+        // SBC
+        0xe9 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::SBC),
+        0xed => InstructionMetadata::new(AddressingMode::Absolute, Instruction::SBC),
+        0xfd => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::SBC),
+        0xf9 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::SBC),
+        0xe5 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::SBC),
+        0xf5 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::SBC),
+        0xe1 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::SBC)
+        }
+        0xf1 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::SBC)
+        }
 
         // SEC
         0x38 => InstructionMetadata::new(AddressingMode::Implied, Instruction::SEC),
