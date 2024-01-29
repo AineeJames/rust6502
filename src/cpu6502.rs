@@ -66,6 +66,7 @@ impl InstructionMetadata {
 }
 
 // TODO: at compile time lookup for instruction b
+// TODO: instruction metadata should instead of name have enum of instruction
 fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
     match opcode {
         // ADC
