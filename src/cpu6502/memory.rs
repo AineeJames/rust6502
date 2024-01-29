@@ -18,7 +18,7 @@ impl Mem {
         // handle specific addrs
         match index {
             MemMap::CHROUT => {
-                if let Some(char) = char::from_u32(ascii_code) {
+                if let Some(char) = char::from_u32(val) {
                     print!("{}", char);
                 } else {
                     print!("");
