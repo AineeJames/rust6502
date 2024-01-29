@@ -67,11 +67,41 @@ endloop:
 
 printcounter:
   lda counter
+  clc
+  jsr print_100s_place
+  jsr print_10s_place
+  jsr print_1s_place
+
   adc #$30 ; numb as char
   sta CHOUT
 
 endprintcounter:
   rts
+
+print_100s_place:
+  ;push x
+  TXS
+
+  cmp #100 
+  bne print_100s_end
+  ldx #0
+  let_code_flow:  
+  sbc #100
+  inx
+  cmp #100
+  beq let_code_flow
+
+  ;Get x to accumulator
+  TXA 
+  adc #$30
+  sta CHOUT
+  
+  ;popx
+  TSX
+
+print_100s_end:
+  rts
+
 
 print:
   lda $00,X
