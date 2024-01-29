@@ -4,226 +4,10 @@ use log::debug;
 use std::time::{Duration, Instant};
 use std::{fs, usize};
 pub mod memory;
+pub mod operation;
+pub mod status_reg;
 
 const MEM_SIZE: usize = 65536;
-
-#[derive(Debug, Clone, Copy)]
-enum AddressingMode {
-    Accumulator,
-    Implied,
-    Immediate,
-    Absolute,
-    AbsoluteXIndexed,
-    AbsoluteYIndexed,
-    ZeroPage,
-    Relative,
-    AbsoluteIndirect,
-    AbsoluteIndirectX,
-    AbsoluteIndirectY,
-    ZeroPageX,
-    ZeroPageY,
-    ZeroPageIndirectIndexedX,
-    ZeroPageIndirectIndexedY,
-}
-
-#[derive(Debug)]
-enum Instruction {
-    ADC,
-    LDX,
-    LDY,
-    STX,
-    STY,
-    CPX,
-    CPY,
-    DEC,
-    DEX,
-    DEY,
-    JMP,
-    NOP,
-    LDA,
-    STA,
-    JSR,
-    RTS,
-    CMP,
-    BEQ,
-    INC,
-    INX,
-    INY,
-}
-
-fn get_addressing_mode_operand_length(mode: AddressingMode) -> u8 {
-    match mode {
-        AddressingMode::Accumulator => 0,
-        AddressingMode::Implied => 0,
-        AddressingMode::Immediate => 1,
-        AddressingMode::Absolute => 2,
-        AddressingMode::AbsoluteXIndexed => 2,
-        AddressingMode::AbsoluteYIndexed => 2,
-        AddressingMode::ZeroPage => 1,
-        AddressingMode::Relative => 1,
-        AddressingMode::AbsoluteIndirect => 2,
-        AddressingMode::AbsoluteIndirectX => 2,
-        AddressingMode::AbsoluteIndirectY => 2,
-        AddressingMode::ZeroPageX => 1,
-        AddressingMode::ZeroPageY => 1,
-        AddressingMode::ZeroPageIndirectIndexedX => 1,
-        AddressingMode::ZeroPageIndirectIndexedY => 1,
-    }
-}
-
-fn get_instruction_length(mode: AddressingMode) -> u8 {
-    1 + get_addressing_mode_operand_length(mode)
-}
-
-struct InstructionMetadata {
-    mode: AddressingMode,
-    instruction_type: Instruction,
-    instruction_byte_length: u8,
-}
-
-impl InstructionMetadata {
-    fn new(mode: AddressingMode, instruction: Instruction) -> InstructionMetadata {
-        InstructionMetadata {
-            mode,
-            instruction_type: instruction,
-            instruction_byte_length: get_instruction_length(mode),
-        }
-    }
-}
-
-fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
-    match opcode {
-        // ADC
-        0x69 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::ADC),
-        0x6d => InstructionMetadata::new(AddressingMode::Absolute, Instruction::ADC),
-        0x7d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::ADC),
-        0x79 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::ADC),
-        0x65 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::ADC),
-        0x75 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::ADC),
-        0x61 => {
-            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::ADC)
-        }
-        0x71 => {
-            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::ADC)
-        }
-
-        // LDX
-        0xa2 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::LDX),
-        0xae => InstructionMetadata::new(AddressingMode::Absolute, Instruction::LDX),
-        0xbe => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::LDX),
-        0xa6 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::LDX),
-        0xb6 => InstructionMetadata::new(AddressingMode::ZeroPageY, Instruction::LDX),
-
-        // LDY
-        0xa0 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::LDY),
-        0xac => InstructionMetadata::new(AddressingMode::Absolute, Instruction::LDY),
-        0xbc => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::LDY),
-        0xa4 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::LDY),
-        0xb4 => InstructionMetadata::new(AddressingMode::ZeroPageY, Instruction::LDY),
-
-        // STX
-        0x8e => InstructionMetadata::new(AddressingMode::Absolute, Instruction::STX),
-        0x86 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::STX),
-        0x96 => InstructionMetadata::new(AddressingMode::ZeroPageY, Instruction::STX),
-
-        // STY
-        0x8c => InstructionMetadata::new(AddressingMode::Absolute, Instruction::STY),
-        0x84 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::STY),
-        0x94 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::STY),
-
-        // CPX
-        0xe0 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::CPX),
-        0xec => InstructionMetadata::new(AddressingMode::Absolute, Instruction::CPX),
-        0xe4 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::CPX),
-
-        // CPY
-        0xc0 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::CPY),
-        0xcc => InstructionMetadata::new(AddressingMode::Absolute, Instruction::CPY),
-        0xc4 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::CPY),
-
-        // DEC
-        0xce => InstructionMetadata::new(AddressingMode::Absolute, Instruction::DEC),
-        0xde => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::DEC),
-        0xc6 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::DEC),
-        0xd6 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::DEC),
-
-        // DEX
-        0xca => InstructionMetadata::new(AddressingMode::Implied, Instruction::DEX),
-
-        // DEY
-        0x88 => InstructionMetadata::new(AddressingMode::Implied, Instruction::DEY),
-
-        // JMP
-        0x4c => InstructionMetadata::new(AddressingMode::Absolute, Instruction::JMP),
-        0x6c => InstructionMetadata::new(AddressingMode::AbsoluteIndirect, Instruction::JMP),
-
-        // NOP
-        0xea => InstructionMetadata::new(AddressingMode::Implied, Instruction::NOP),
-
-        // LDA
-        0xa9 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::LDA),
-        0xad => InstructionMetadata::new(AddressingMode::Absolute, Instruction::LDA),
-        0xbd => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::LDA),
-        0xb9 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::LDA),
-        0xa5 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::LDA),
-        0xb5 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::LDA),
-        0xa1 => {
-            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::LDA)
-        }
-        0xb1 => {
-            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::LDA)
-        }
-
-        // STA
-        0x8d => InstructionMetadata::new(AddressingMode::Absolute, Instruction::STA),
-        0x9d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::STA),
-        0x99 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::STA),
-        0x85 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::STA),
-        0x95 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::STA),
-        0x81 => {
-            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::STA)
-        }
-        0x91 => {
-            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::STA)
-        }
-
-        // JSR
-        0x20 => InstructionMetadata::new(AddressingMode::Absolute, Instruction::JSR),
-
-        // RTS
-        0x60 => InstructionMetadata::new(AddressingMode::Implied, Instruction::RTS),
-
-        // CMP
-        0xc9 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::CMP),
-        0xcd => InstructionMetadata::new(AddressingMode::Absolute, Instruction::CMP),
-        0xdd => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::CMP),
-        0xd9 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::CMP),
-        0xc5 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::CMP),
-        0xd5 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::CMP),
-        0xc1 => {
-            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::CMP)
-        }
-        0xd1 => {
-            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::CMP)
-        }
-
-        // BEQ
-        0xf0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BEQ),
-
-        // INC
-        0xee => InstructionMetadata::new(AddressingMode::Absolute, Instruction::INC),
-        0xfe => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::INC),
-        0xe6 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::INC),
-        0xf6 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::INC),
-
-        // INX
-        0xe8 => InstructionMetadata::new(AddressingMode::Implied, Instruction::INX),
-
-        // INY
-        0xc8 => InstructionMetadata::new(AddressingMode::Implied, Instruction::INY),
-        _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
-    }
-}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -269,64 +53,6 @@ pub struct Args {
     pub instrumentation: bool,
 }
 
-// 7  bit  0
-// ---- ----
-// NV1B DIZC
-// |||| ||||
-// |||| |||+- Carry
-// |||| ||+-- Zero
-// |||| |+--- Interrupt Disable
-// |||| +---- Decimal
-// |||+------ (No CPU effect; see: the B flag)
-// ||+------- (No CPU effect; always pushed as 1)
-// |+-------- Overflow
-// +--------- Negative
-enum Flag {
-    Negative,
-    Overflow,
-    Unused,
-    Break,
-    DecimalMode,
-    Interrupt,
-    Zero,
-    Carry,
-}
-
-pub struct StatusFlags {
-    n: bool,
-    v: bool,
-    u: bool,
-    b: bool,
-    d: bool,
-    i: bool,
-    z: bool,
-    c: bool,
-}
-impl StatusFlags {
-    fn print_status_flags_readable(&self) {
-        println!("Negative Flag: {}", self.n);
-        println!("Overflow Flag: {}", self.v);
-        println!("Unused Flag: {}", self.u);
-        println!("Break Flag: {}", self.b);
-        println!("Decimal Mode: {}", self.d);
-        println!("Interrupt Disable: {}", self.i);
-        println!("Zero Flag: {}", self.z);
-        println!("Carry Flag: {}\n", self.c);
-    }
-    fn set_flag(&mut self, to_set_flag: Flag, flag_state: bool) {
-        match to_set_flag {
-            Flag::Negative => self.n = flag_state,
-            Flag::Overflow => self.v = flag_state,
-            Flag::Unused => self.u = flag_state,
-            Flag::Break => self.b = flag_state,
-            Flag::DecimalMode => self.d = flag_state,
-            Flag::Interrupt => self.i = flag_state,
-            Flag::Zero => self.z = flag_state,
-            Flag::Carry => self.c = flag_state,
-        }
-    }
-}
-
 pub struct Cpu6502 {
     pub memory: memory::Mem,
     pub accumulator: u8,
@@ -334,7 +60,7 @@ pub struct Cpu6502 {
     pub y_index: u8,
     pub program_counter: u16,
     pub stack_pointer: u8,
-    pub status_flags: StatusFlags,
+    pub status_flags: status_reg::StatusFlags,
     pub cmdline_args: Args,
     pub start_time: Instant,
     pub instructions_executed: usize,
@@ -351,7 +77,7 @@ pub fn init_cpu6502(args: Args) -> Cpu6502 {
         y_index: 0,
         program_counter: 0,
         stack_pointer: 0xFF,
-        status_flags: StatusFlags {
+        status_flags: status_reg::StatusFlags {
             n: false,
             v: false,
             u: true,
@@ -400,43 +126,53 @@ impl Cpu6502 {
         return instruction;
     }
 
-    fn print_instruction(&mut self, instruction: &InstructionMetadata) {
+    fn print_instruction(&mut self, instruction: &operation::InstructionMetadata) {
         // STX (ZeroPageY) operand
         if self.cmdline_args.no_print {
             return;
         }
 
         let operand = match instruction.mode {
-            AddressingMode::AbsoluteXIndexed => format!(
+            operation::AddressingMode::AbsoluteXIndexed => format!(
                 "${:#>04x},X",
-                self.get_addr(AddressingMode::AbsoluteXIndexed)
+                self.get_addr(operation::AddressingMode::AbsoluteXIndexed)
             ),
-            AddressingMode::Relative => {
-                format!("${:#>04x}", self.get_addr(AddressingMode::Relative))
+            operation::AddressingMode::Relative => {
+                format!(
+                    "${:#>04x}",
+                    self.get_addr(operation::AddressingMode::Relative)
+                )
             }
-            AddressingMode::Implied => format!(""),
-            AddressingMode::Absolute => format!("${:#>04x}", self.get_addr(instruction.mode)),
-            AddressingMode::AbsoluteIndirect => {
-                format!("(${:#>04x})", self.get_addr(AddressingMode::Absolute))
+            operation::AddressingMode::Implied => format!(""),
+            operation::AddressingMode::Absolute => {
+                format!("${:#>04x}", self.get_addr(instruction.mode))
             }
-            AddressingMode::Immediate => {
+            operation::AddressingMode::AbsoluteIndirect => {
+                format!(
+                    "(${:#>04x})",
+                    self.get_addr(operation::AddressingMode::Absolute)
+                )
+            }
+            operation::AddressingMode::Immediate => {
                 let addr = self.get_addr(instruction.mode);
                 format!("#${:#>02x}", self.memory.get_byte(addr))
             }
-            AddressingMode::ZeroPage => format!("${:#>02x}", self.get_addr(instruction.mode)),
-            AddressingMode::ZeroPageX => format!(
+            operation::AddressingMode::ZeroPage => {
+                format!("${:#>02x}", self.get_addr(instruction.mode))
+            }
+            operation::AddressingMode::ZeroPageX => format!(
                 "${:#>02x},X",
                 self.get_addr(instruction.mode) - self.x_index as usize
             ),
-            AddressingMode::ZeroPageY => format!(
+            operation::AddressingMode::ZeroPageY => format!(
                 "${:#>02x},Y",
                 self.get_addr(instruction.mode) - self.y_index as usize
             ),
-            AddressingMode::ZeroPageIndirectIndexedX => format!(
+            operation::AddressingMode::ZeroPageIndirectIndexedX => format!(
                 "$({:#>02x},X)",
                 self.get_addr(instruction.mode) - self.x_index as usize
             ),
-            AddressingMode::ZeroPageIndirectIndexedY => format!(
+            operation::AddressingMode::ZeroPageIndirectIndexedY => format!(
                 "$({:#>02x},Y)",
                 self.get_addr(instruction.mode) - self.y_index as usize
             ),
@@ -497,132 +233,150 @@ impl Cpu6502 {
         return addr;
     }
 
-    fn get_addr(&mut self, mode: AddressingMode) -> usize {
+    fn get_addr(&mut self, mode: operation::AddressingMode) -> usize {
         let addr: usize = match mode {
-            AddressingMode::Implied => 0,
-            AddressingMode::Relative => self.program_counter as usize + 1,
-            AddressingMode::Immediate => self.program_counter as usize + 1,
-            AddressingMode::Absolute => self.get_abs_addr(),
-            AddressingMode::AbsoluteIndirect => self.get_abs_indirect_addr(),
-            AddressingMode::AbsoluteXIndexed => self.get_abs_addr() + self.x_index as usize,
-            AddressingMode::AbsoluteYIndexed => self.get_abs_addr() + self.y_index as usize,
-            AddressingMode::ZeroPage => self.get_zpg_addr(None),
-            AddressingMode::ZeroPageX => self.get_zpg_addr(Some(Index::X)),
-            AddressingMode::ZeroPageY => self.get_zpg_addr(Some(Index::Y)),
-            AddressingMode::ZeroPageIndirectIndexedX => self.get_zpg_indirect_addr(Index::X),
-            AddressingMode::ZeroPageIndirectIndexedY => self.get_zpg_indirect_addr(Index::Y),
+            operation::AddressingMode::Implied => 0,
+            operation::AddressingMode::Relative => self.program_counter as usize + 1,
+            operation::AddressingMode::Immediate => self.program_counter as usize + 1,
+            operation::AddressingMode::Absolute => self.get_abs_addr(),
+            operation::AddressingMode::AbsoluteIndirect => self.get_abs_indirect_addr(),
+            operation::AddressingMode::AbsoluteXIndexed => {
+                self.get_abs_addr() + self.x_index as usize
+            }
+            operation::AddressingMode::AbsoluteYIndexed => {
+                self.get_abs_addr() + self.y_index as usize
+            }
+            operation::AddressingMode::ZeroPage => self.get_zpg_addr(None),
+            operation::AddressingMode::ZeroPageX => self.get_zpg_addr(Some(Index::X)),
+            operation::AddressingMode::ZeroPageY => self.get_zpg_addr(Some(Index::Y)),
+            operation::AddressingMode::ZeroPageIndirectIndexedX => {
+                self.get_zpg_indirect_addr(Index::X)
+            }
+            operation::AddressingMode::ZeroPageIndirectIndexedY => {
+                self.get_zpg_indirect_addr(Index::Y)
+            }
             _ => todo!("Mode not implemented in get_addr()"),
         };
         return addr;
     }
 
-    fn ldx(&mut self, mode: AddressingMode) {
+    fn ldx(&mut self, mode: operation::AddressingMode) {
         // load from memory into x
         let addr = self.get_addr(mode);
         let val = self.memory.get_byte(addr);
         self.x_index = val;
-        self.status_flags.set_flag(Flag::Zero, val == 0);
+        self.status_flags.set_flag(status_reg::Flag::Zero, val == 0);
         self.status_flags
-            .set_flag(Flag::Negative, val & 0b1000000 != 0);
+            .set_flag(status_reg::Flag::Negative, val & 0b1000000 != 0);
     }
 
-    fn ldy(&mut self, mode: AddressingMode) {
+    fn ldy(&mut self, mode: operation::AddressingMode) {
         // load from memory into y
         let addr = self.get_addr(mode);
         let val = self.memory.get_byte(addr);
         self.y_index = val;
-        self.status_flags.set_flag(Flag::Zero, val == 0);
+        self.status_flags.set_flag(status_reg::Flag::Zero, val == 0);
         self.status_flags
-            .set_flag(Flag::Negative, val & 0b1000000 != 0);
+            .set_flag(status_reg::Flag::Negative, val & 0b1000000 != 0);
     }
 
-    fn stx(&mut self, mode: AddressingMode) {
+    fn stx(&mut self, mode: operation::AddressingMode) {
         // store index x into memory
         let addr = self.get_addr(mode);
         self.memory.set_byte(addr, self.x_index);
     }
 
-    fn sty(&mut self, mode: AddressingMode) {
+    fn sty(&mut self, mode: operation::AddressingMode) {
         // store index y into memory
         let addr = self.get_addr(mode);
         self.memory.set_byte(addr, self.y_index);
     }
 
-    fn cpx(&mut self, mode: AddressingMode) {
+    fn cpx(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         if self.x_index >= self.memory.get_byte(addr) {
-            self.status_flags.set_flag(Flag::Carry, true);
+            self.status_flags.set_flag(status_reg::Flag::Carry, true);
         }
         if self.memory.get_byte(addr) > self.x_index {
-            self.status_flags.set_flag(Flag::Carry, false);
+            self.status_flags.set_flag(status_reg::Flag::Carry, false);
         }
         self.status_flags.set_flag(
-            Flag::Negative,
+            status_reg::Flag::Negative,
             (self.x_index - self.memory.get_byte(addr)) & 0b1000000 != 0,
         );
-        self.status_flags
-            .set_flag(Flag::Zero, self.x_index == self.memory.get_byte(addr));
+        self.status_flags.set_flag(
+            status_reg::Flag::Zero,
+            self.x_index == self.memory.get_byte(addr),
+        );
     }
 
-    fn cpy(&mut self, mode: AddressingMode) {
+    fn cpy(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         if self.y_index >= self.memory.get_byte(addr) {
-            self.status_flags.set_flag(Flag::Carry, true);
+            self.status_flags.set_flag(status_reg::Flag::Carry, true);
         }
         if self.memory.get_byte(addr) > self.y_index {
-            self.status_flags.set_flag(Flag::Carry, false);
+            self.status_flags.set_flag(status_reg::Flag::Carry, false);
         }
         self.status_flags.set_flag(
-            Flag::Negative,
+            status_reg::Flag::Negative,
             (self.y_index - self.memory.get_byte(addr)) & 0b1000000 != 0,
         );
-        self.status_flags
-            .set_flag(Flag::Zero, self.y_index == self.memory.get_byte(addr));
+        self.status_flags.set_flag(
+            status_reg::Flag::Zero,
+            self.y_index == self.memory.get_byte(addr),
+        );
     }
 
-    fn dec(&mut self, mode: AddressingMode) {
+    fn dec(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         self.memory.decrement_mem(addr);
+        self.status_flags.set_flag(
+            status_reg::Flag::Negative,
+            self.memory.get_byte(addr) & 0b10000000 != 0,
+        );
         self.status_flags
-            .set_flag(Flag::Negative, self.memory.get_byte(addr) & 0b10000000 != 0);
-        self.status_flags
-            .set_flag(Flag::Zero, self.memory.get_byte(addr) == 0);
+            .set_flag(status_reg::Flag::Zero, self.memory.get_byte(addr) == 0);
     }
 
     fn dex(&mut self) {
         self.x_index -= 1;
         self.status_flags
-            .set_flag(Flag::Negative, self.x_index & 0b10000000 != 0);
-        self.status_flags.set_flag(Flag::Zero, self.x_index == 0);
+            .set_flag(status_reg::Flag::Negative, self.x_index & 0b10000000 != 0);
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, self.x_index == 0);
     }
 
     fn dey(&mut self) {
         self.y_index -= 1;
         self.status_flags
-            .set_flag(Flag::Negative, self.y_index & 0b10000000 != 0);
-        self.status_flags.set_flag(Flag::Zero, self.y_index == 0);
+            .set_flag(status_reg::Flag::Negative, self.y_index & 0b10000000 != 0);
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, self.y_index == 0);
     }
 
-    fn jmp(&mut self, mode: AddressingMode) {
+    fn jmp(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         self.program_counter = addr as u16
     }
 
-    fn lda(&mut self, mode: AddressingMode) {
+    fn lda(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         self.accumulator = self.memory.get_byte(addr);
         self.status_flags
-            .set_flag(Flag::Zero, self.accumulator == 0);
-        self.status_flags
-            .set_flag(Flag::Negative, (self.accumulator & 0b10000000) != 0);
+            .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
+        self.status_flags.set_flag(
+            status_reg::Flag::Negative,
+            (self.accumulator & 0b10000000) != 0,
+        );
     }
 
-    fn sta(&mut self, mode: AddressingMode) {
+    fn sta(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         self.memory.set_byte(addr, self.accumulator);
     }
 
-    fn jsr(&mut self, mode: AddressingMode) {
+    fn jsr(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         // Store the return address onto the stack
         let return_addr = self.program_counter + 3; // Adjust for the JSR instruction size
@@ -639,19 +393,20 @@ impl Cpu6502 {
         self.program_counter = return_addr;
     }
 
-    fn cmp(&mut self, mode: AddressingMode) {
+    fn cmp(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         let value = self.memory.get_byte(addr);
         let result = self.accumulator.wrapping_sub(value);
 
-        self.status_flags.set_flag(Flag::Zero, result == 0);
         self.status_flags
-            .set_flag(Flag::Negative, result & 0b10000000 != 0);
+            .set_flag(status_reg::Flag::Zero, result == 0);
         self.status_flags
-            .set_flag(Flag::Carry, value <= self.accumulator);
+            .set_flag(status_reg::Flag::Negative, result & 0b10000000 != 0);
+        self.status_flags
+            .set_flag(status_reg::Flag::Carry, value <= self.accumulator);
     }
 
-    fn beq(&mut self, mode: AddressingMode) {
+    fn beq(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         let offset = self.memory.get_byte(addr) as i8;
         if self.status_flags.z {
@@ -662,15 +417,16 @@ impl Cpu6502 {
         }
     }
 
-    fn inc(&mut self, mode: AddressingMode) {
+    fn inc(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         let value = self.memory.get_byte(addr);
         let new_value = value.wrapping_add(1);
         self.memory.set_byte(addr, new_value);
 
-        self.status_flags.set_flag(Flag::Zero, new_value == 0);
         self.status_flags
-            .set_flag(Flag::Negative, new_value & 0b10000000 != 0);
+            .set_flag(status_reg::Flag::Zero, new_value == 0);
+        self.status_flags
+            .set_flag(status_reg::Flag::Negative, new_value & 0b10000000 != 0);
     }
 
     fn inx(&mut self) {
@@ -683,8 +439,9 @@ impl Cpu6502 {
         self.x_index = result;
 
         self.status_flags
-            .set_flag(Flag::Negative, result & 0b10000000 != 0);
-        self.status_flags.set_flag(Flag::Zero, result == 0);
+            .set_flag(status_reg::Flag::Negative, result & 0b10000000 != 0);
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, result == 0);
     }
 
     fn iny(&mut self) {
@@ -697,8 +454,9 @@ impl Cpu6502 {
         self.y_index = result;
 
         self.status_flags
-            .set_flag(Flag::Negative, result & 0b10000000 != 0);
-        self.status_flags.set_flag(Flag::Zero, result == 0);
+            .set_flag(status_reg::Flag::Negative, result & 0b10000000 != 0);
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, result == 0);
     }
 
     fn push_stack(&mut self, value: u8) {
@@ -720,7 +478,8 @@ impl Cpu6502 {
         loop {
             self.print_state();
             let cur_opcode = self.get_next_byte();
-            let instruction: InstructionMetadata = get_opcode_metadata(cur_opcode);
+            let instruction: operation::InstructionMetadata =
+                operation::get_opcode_metadata(cur_opcode);
             self.print_instruction(&instruction);
 
             if self.cmdline_args.step_debug {
@@ -728,27 +487,27 @@ impl Cpu6502 {
             }
 
             match instruction.instruction_type {
-                Instruction::ADC => self.adc(instruction.mode),
-                Instruction::STX => self.stx(instruction.mode),
-                Instruction::STY => self.sty(instruction.mode),
-                Instruction::LDX => self.ldx(instruction.mode),
-                Instruction::LDY => self.ldy(instruction.mode),
-                Instruction::CPX => self.cpx(instruction.mode),
-                Instruction::CPY => self.cpy(instruction.mode),
-                Instruction::DEC => self.dec(instruction.mode),
-                Instruction::DEX => self.dex(),
-                Instruction::DEY => self.dey(),
-                Instruction::JMP => self.jmp(instruction.mode),
-                Instruction::NOP => {}
-                Instruction::LDA => self.lda(instruction.mode),
-                Instruction::STA => self.sta(instruction.mode),
-                Instruction::JSR => self.jsr(instruction.mode),
-                Instruction::RTS => self.rts(),
-                Instruction::CMP => self.cmp(instruction.mode),
-                Instruction::BEQ => self.beq(instruction.mode),
-                Instruction::INC => self.inc(instruction.mode),
-                Instruction::INX => self.inx(),
-                Instruction::INY => self.iny(),
+                operation::Instruction::ADC => self.adc(instruction.mode),
+                operation::Instruction::STX => self.stx(instruction.mode),
+                operation::Instruction::STY => self.sty(instruction.mode),
+                operation::Instruction::LDX => self.ldx(instruction.mode),
+                operation::Instruction::LDY => self.ldy(instruction.mode),
+                operation::Instruction::CPX => self.cpx(instruction.mode),
+                operation::Instruction::CPY => self.cpy(instruction.mode),
+                operation::Instruction::DEC => self.dec(instruction.mode),
+                operation::Instruction::DEX => self.dex(),
+                operation::Instruction::DEY => self.dey(),
+                operation::Instruction::JMP => self.jmp(instruction.mode),
+                operation::Instruction::NOP => {}
+                operation::Instruction::LDA => self.lda(instruction.mode),
+                operation::Instruction::STA => self.sta(instruction.mode),
+                operation::Instruction::JSR => self.jsr(instruction.mode),
+                operation::Instruction::RTS => self.rts(),
+                operation::Instruction::CMP => self.cmp(instruction.mode),
+                operation::Instruction::BEQ => self.beq(instruction.mode),
+                operation::Instruction::INC => self.inc(instruction.mode),
+                operation::Instruction::INX => self.inx(),
+                operation::Instruction::INY => self.iny(),
                 _ => todo!(
                     "Add instruction {:?} to run()",
                     instruction.instruction_type
@@ -757,13 +516,16 @@ impl Cpu6502 {
             // increment program counter by instruction length
             if !matches!(
                 instruction.instruction_type,
-                Instruction::JMP | Instruction::JSR | Instruction::RTS | Instruction::BEQ
+                operation::Instruction::JMP
+                    | operation::Instruction::JSR
+                    | operation::Instruction::RTS
+                    | operation::Instruction::BEQ
             ) {
                 self.program_counter += instruction.instruction_byte_length as u16;
             }
 
             self.instructions_executed += 1;
-            if self.cmdline_args.instrumentation && (self.instructions_executed % 10000 == 0) {
+            if self.cmdline_args.instrumentation && (self.instructions_executed % 10000000 == 0) {
                 let duration = self.start_time.elapsed().as_nanos();
                 // we have been executing for this long
                 let instructions_per_second =
@@ -776,7 +538,7 @@ impl Cpu6502 {
         }
     }
 
-    fn adc(&mut self, mode: AddressingMode) {
+    fn adc(&mut self, mode: operation::AddressingMode) {
         // TODO: Decimal mode if status register
         // has decimal mode flag set need to treat
         // hex as decimal for example 0x65 == 65
@@ -787,10 +549,11 @@ impl Cpu6502 {
         let overflow_flag_before_add: bool = (self.accumulator & (1 << 7)) == 1;
         let sum = mem_val + self.accumulator as u16 + carry_add as u16;
         self.accumulator = sum as u8;
-        self.status_flags.set_flag(Flag::Carry, sum > 255);
+        self.status_flags
+            .set_flag(status_reg::Flag::Carry, sum > 255);
         let overflow_flag_after_add: bool = (self.accumulator & (1 << 7)) == 1;
         self.status_flags.set_flag(
-            Flag::Overflow,
+            status_reg::Flag::Overflow,
             overflow_flag_after_add != overflow_flag_before_add,
         );
     }
