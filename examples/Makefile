@@ -1,5 +1,17 @@
-hello_world: hello_world.o
-	ld65 -o hello_world hello_world.o -C bios.cfg
+# Makefile
 
-hello_world.o: hello_world.s
-	ca65 hello_world.s
+ASSEMBLER = ca65
+LINKER = ld65
+ASSEMBLY_FILES = $(wildcard *.s)
+OBJECT_FILES = $(ASSEMBLY_FILES:.s=.o)
+
+all: $(OBJECT_FILES)
+
+%.o: %.s
+	$(ASSEMBLER) $<
+
+	$(LINKER) -o $(basename $<) -C bios.cfg $@
+
+clean:
+	rm -f $(OBJECT_FILES)
+
