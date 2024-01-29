@@ -750,13 +750,13 @@ impl Cpu6502 {
             }
 
             self.instructions_executed += 1;
-            if self.cmdline_args.instrumentation && (self.instructions_executed % 10000 == 0) {
+            if self.cmdline_args.instrumentation && (self.instructions_executed % 100000000 == 0) {
                 let duration = self.start_time.elapsed().as_nanos();
                 // we have been executing for this long
                 let instructions_per_second =
                     (self.instructions_executed * 1_000_000_000) as u128 / (duration as u128);
                 println!(
-                    "Currently executing at {:?} instructions per second",
+                    "\nCurrently executing at {:?} instructions per second",
                     instructions_per_second
                 );
             }
