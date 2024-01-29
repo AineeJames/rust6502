@@ -21,7 +21,7 @@ space:
 newline:
   .byte $0A, $00
 counter:
-  .byte $01 ; start at 101 for testing
+  .byte $0b ; start at 11 for testing
 
 .segment "CODE"
 
@@ -70,9 +70,15 @@ printcounter:
   clc
   jsr print_100s_place
   ;if a > 100 -100
+  ;need to subtract to just tens here
+  lda counter
+  clc
   jsr print_10s_place
   ;if a > 10 -10
-  ;jsr print_1s_place
+  
+  lda counter
+  clc
+  jsr print_1s_place
 
   ;adc #$30 ; numb as char
   ;sta CHOUT
@@ -115,11 +121,11 @@ print_100s_end:
 
 print_10s_place:
   txs
-  cmp #100
+  cmp #10
   beq print_10s_end
   ldx #0
   let_10s_flow:
-  sbc #100
+  sbc #10
   bcs stop_10s_flow
   bne not_zero_10s
   inx 
@@ -142,6 +148,31 @@ stop_10s_flow:
 print_10s_end:
   TSX
   rts
+
+print_1s_place:
+  txs
+  ;acc has num to print
+  cmp #10
+  bne stop_1s_flow
+
+  sub_10s_loop:
+  sbc #10
+  cmp #100
+  bne stop_1s_flow
+  jmp sub_10s_loop
+
+stop_1s_flow:
+  clc
+  adc #$30
+  sta CHOUT
+  jmp print_1s_end
+
+print_1s_end:
+  TSX
+  rts
+
+
+
 
 print:
   lda $00,X

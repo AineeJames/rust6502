@@ -63,7 +63,7 @@ pub struct Cpu6502 {
     pub status_flags: status_reg::StatusFlags,
     pub cmdline_args: Args,
     pub start_time: Instant,
-    pub instructions_executed: usize,
+    pub instructions_executed: u128,
 }
 
 pub fn init_cpu6502(args: Args) -> Cpu6502 {
