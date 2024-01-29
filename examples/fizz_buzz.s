@@ -28,16 +28,16 @@ counter:
 start:
 
   jsr printcounter
-  ;ldx #<space
-  ;jsr print
-  ;ldx #<fizzstr
-  ;jsr print
-  ;ldx #<space
-  ;jsr print
-  ;ldx #<buzzstr
-  ;jsr print
-  ;ldx #<newline
-  ;jsr print
+  ldx #<space
+  jsr print
+  ldx #<fizzstr
+  jsr print
+  ldx #<space
+  jsr print
+  ldx #<buzzstr
+  jsr print
+  ldx #<newline
+  jsr print
 
   ; inc counter and break out of loop if at max val
   inc counter
@@ -69,7 +69,9 @@ printcounter:
   lda counter
   clc
   jsr print_100s_place
+  ;if a > 100 -100
   ;jsr print_10s_place
+  ;if a > 10 -10
   ;jsr print_1s_place
 
   ;adc #$30 ; numb as char
@@ -94,7 +96,7 @@ print_100s_place:
   not_zero:
   inx
   cmp #100
-  beq let_code_flow
+  bne let_code_flow
 
 stop_code_flow:
 

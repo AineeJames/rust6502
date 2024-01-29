@@ -423,10 +423,12 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         let offset = self.memory.get_byte(addr) as i8;
         if !self.status_flags.z {
+            debug!("Taking bne branch");
             //let new_pc = self.program_counter + offset as u16;
-            let new_pc = (self.program_counter).wrapping_add_signed(offset as i16);
+            let new_pc = (self.program_counter + 2).wrapping_add_signed(offset as i16);
             self.program_counter = new_pc;
         } else {
+            debug!("Not taking bne branch");
             self.program_counter += 2;
         }
     }
@@ -627,6 +629,7 @@ impl Cpu6502 {
                     | operation::Instruction::RTS
                     | operation::Instruction::BEQ
                     | operation::Instruction::BCS
+                    | operation::Instruction::BNE
             ) {
                 self.program_counter += instruction.instruction_byte_length as u16;
             }
