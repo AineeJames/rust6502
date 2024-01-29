@@ -43,7 +43,6 @@ enum Instruction {
     LDA,
     STA,
     JSR,
-    RST,
     RTS,
     CMP,
     BEQ,
