@@ -236,19 +236,39 @@ pub struct Args {
     pub binary_file: String,
 
     // Print all mem even if zeroed
-    #[arg(short, long, default_value_t = false)]
+    #[arg(
+        help = "Print all memory each iteration",
+        short,
+        long,
+        default_value_t = false
+    )]
     pub print_all_mem: bool,
 
     // Step through program
-    #[arg(short, long, default_value_t = false)]
+    #[arg(
+        help = "Step through instruction by instruction",
+        short,
+        long,
+        default_value_t = false
+    )]
     pub step_debug: bool,
 
     // No printing of cpu regs, mem, etc...
-    #[arg(short, long, default_value_t = false)]
+    #[arg(
+        help = "Dont print any debug info",
+        short,
+        long,
+        default_value_t = false
+    )]
     pub no_print: bool,
 
     // Print instructions per second
-    #[arg(short, long, default_value_t = false)]
+    #[arg(
+        help = "Print out instructions per second messages",
+        short,
+        long,
+        default_value_t = false
+    )]
     pub instrumentation: bool,
 }
 
