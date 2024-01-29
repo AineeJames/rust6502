@@ -138,13 +138,12 @@ print_100s_end:
 print_10s_place:
   txs
   cmp #10
-  beq stop_10s_flow
+  bcc stop_10s_flow
   ldx #0
   let_10s_flow:
   sbc #10
   bcs stop_10s_flow
   bne not_zero_10s
-  inx 
   jmp stop_10s_flow
   not_zero_10s:
   inx
