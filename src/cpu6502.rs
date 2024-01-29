@@ -283,7 +283,7 @@ impl StatusFlags {
 }
 
 pub struct Cpu6502 {
-    pub memory: Vec<u8>,
+    pub memory: memory::Mem,
     pub accumulator: u8,
     pub x_index: u8,
     pub y_index: u8,
@@ -293,10 +293,58 @@ pub struct Cpu6502 {
     pub cmdline_args: Args,
 }
 
+mod memory {
+    use crate::cpu6502::MEM_SIZE;
+
+    pub struct Mem {
+        memory: Vec<u8>,
+    }
+    impl Mem {
+        pub fn init_mem() -> Mem {
+            Mem {
+                memory: vec![0; MEM_SIZE],
+            }
+        }
+        pub fn set_byte(mut self, index: u16, val: u8) {
+            self.memory[index as usize] = val;
+        }
+
+        pub fn get(&self, index: usize) -> Option<&u8> {
+            self.memory.get(index)
+        }
+
+        pub fn dump_memory(self, print_all: bool) {
+            for i in (0..MEM_SIZE).step_by(0x10) {
+                let slice = &self.memory[i..i + 0x10];
+
+                if slice.iter().any(|&x| x > 0) || print_all {
+                    print!("0x{i:#>04x}: ");
+                    for byte in slice.iter().cloned() {
+                        print!("{byte:02x} ");
+                    }
+
+                    for &byte in slice {
+                        if byte.is_ascii() && byte.is_ascii_graphic() {
+                            let c: char = byte as char;
+                            print!("{c}")
+                        } else {
+                            print!(".")
+                        }
+                    }
+                    print!("\n");
+                }
+            }
+        }
+        pub fn set_all(mut self, new_mem: Vec<u8>) {
+            self.memory = new_mem;
+        }
+    }
+}
+
 pub fn init_cpu6502(args: Args) -> Cpu6502 {
     let mut cpu = Cpu6502 {
         cmdline_args: args,
-        memory: vec![0; MEM_SIZE], // stack (0x0100, 0x01FF)
+        memory: memory::Mem::init_mem(),
         accumulator: 0,
         x_index: 0,
         y_index: 0,
@@ -323,29 +371,6 @@ enum Index {
 }
 
 impl Cpu6502 {
-    pub fn dump_memory(&self) {
-        for i in (0..MEM_SIZE).step_by(0x10) {
-            let slice = &self.memory[i..i + 0x10];
-
-            if slice.iter().any(|&x| x > 0) || self.cmdline_args.print_all_mem {
-                print!("0x{i:#>04x}: ");
-                for byte in slice.iter().cloned() {
-                    print!("{byte:02x} ");
-                }
-
-                for &byte in slice {
-                    if byte.is_ascii() && byte.is_ascii_graphic() {
-                        let c: char = byte as char;
-                        print!("{c}")
-                    } else {
-                        print!(".")
-                    }
-                }
-                print!("\n");
-            }
-        }
-    }
-
     pub fn print_state(&self) {
         self.status_flags.print_status_flags_readable();
         println!("X register = 0x{:#>02x}", self.x_index);
@@ -353,7 +378,7 @@ impl Cpu6502 {
         println!("Accumulator = 0x{:#>04x}", self.accumulator);
         println!("Program Counter = 0x{:#>04x}", self.program_counter);
         println!("Stack Pointer = 0x{:#>02x}", self.stack_pointer);
-        self.dump_memory();
+        self.memory.dump_memory(self.cmdline_args.print_all_mem);
     }
 
     pub fn load_file_into_memory(&mut self) {
@@ -363,7 +388,7 @@ impl Cpu6502 {
             Ok(code) => code,
             Err(error) => panic!("Problem opening the file: {:?}", error),
         };
-        self.memory = code;
+        self.memory.set_all(code);
     }
 
     fn get_next_byte(&mut self) -> u8 {
