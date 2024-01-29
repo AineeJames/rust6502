@@ -228,12 +228,11 @@ fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
     }
 }
 
-/// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
     // 6502 hex file to run
-    #[arg(short, long)]
+    #[arg(help = "Input file", required = true)]
     pub binary_file: String,
 
     // Print all mem even if zeroed
@@ -311,9 +310,6 @@ impl StatusFlags {
     }
 }
 
-// TODO: add time counter ticks runningt
-// counter of instructions ran to output
-// instructions per second
 pub struct Cpu6502 {
     pub memory: memory::Mem,
     pub accumulator: u8,
