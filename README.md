@@ -15,5 +15,3 @@ To Implement:
 - RTI
 - BMI
 - BPL
-- BVC
-- BVS

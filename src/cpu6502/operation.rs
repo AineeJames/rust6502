@@ -3,6 +3,8 @@ pub enum Instruction {
     ADC,
     AND,
     BIT,
+    BVS,
+    BVC,
     SBC,
     LDX,
     LDY,
@@ -267,6 +269,12 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
 
         // BNE
         0xd0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BNE),
+
+        // BVS
+        0x70 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BVS),
+
+        // BVC
+        0x50 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BVC),
 
         // INC
         0xee => InstructionMetadata::new(AddressingMode::Absolute, Instruction::INC),

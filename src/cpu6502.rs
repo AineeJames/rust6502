@@ -437,6 +437,34 @@ impl Cpu6502 {
         }
     }
 
+    fn bvs(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        let offset = self.memory.get_byte(addr) as i8;
+        if self.status_flags.v {
+            let new_pc = self
+                .program_counter
+                .wrapping_add_signed(2)
+                .wrapping_add_signed(offset as i16);
+            self.program_counter = new_pc;
+        } else {
+            self.program_counter += 2;
+        }
+    }
+
+    fn bvc(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        let offset = self.memory.get_byte(addr) as i8;
+        if !self.status_flags.v {
+            let new_pc = self
+                .program_counter
+                .wrapping_add_signed(2)
+                .wrapping_add_signed(offset as i16);
+            self.program_counter = new_pc;
+        } else {
+            self.program_counter += 2;
+        }
+    }
+
     fn bcc(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         let offset = self.memory.get_byte(addr) as i8;
@@ -747,6 +775,8 @@ impl Cpu6502 {
                 operation::Instruction::CMP => self.cmp(instruction.mode),
                 operation::Instruction::BEQ => self.beq(instruction.mode),
                 operation::Instruction::BNE => self.bne(instruction.mode),
+                operation::Instruction::BVS => self.bvs(instruction.mode),
+                operation::Instruction::BVC => self.bvc(instruction.mode),
                 operation::Instruction::INC => self.inc(instruction.mode),
                 operation::Instruction::INX => self.inx(),
                 operation::Instruction::INY => self.iny(),
