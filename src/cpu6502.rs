@@ -750,6 +750,20 @@ impl Cpu6502 {
         };
     }
 
+
+    fn brk(&mut self, mode: operation::AddressingMode) {
+        todo!("Need to implement brk");
+    }
+
+    
+    fn ora(&mut self, mode: operation::AddressingMode) {
+        todo!("Need to implement ora");
+    }
+
+    fn rti(&mut self, mode: operation::AddressingMode) {
+        todo!("Need to implement rti");
+    }
+
     fn rol(&mut self, mode: operation::AddressingMode) {
         match mode {
             operation::AddressingMode::Accumulator => {
@@ -785,6 +799,7 @@ impl Cpu6502 {
         let reg = self.status_flags.as_u8();
         self.push_stack(reg);
     }
+
 
     fn push_stack(&mut self, value: u8) {
         let stack_addr = 0x0100 | (self.stack_pointer as u16);
@@ -860,6 +875,9 @@ impl Cpu6502 {
                 operation::Instruction::ASL => self.asl(instruction.mode),
                 operation::Instruction::AND => self.and(instruction.mode),
                 operation::Instruction::BIT => self.bit(instruction.mode),
+                operation::Instruction::BRK => self.brk(instruction.mode),
+                operation::Instruction::ORA => self.ora(instruction.mode),
+                operation::Instruction::BRK => self.rti(instruction.mode),
                 operation::Instruction::CLC => {
                     self.status_flags.set_flag(status_reg::Flag::Carry, false)
                 }

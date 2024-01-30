@@ -1,6 +1,9 @@
 #[derive(Debug)]
 pub enum Instruction {
     ADC,
+    BRK,
+    ORA,
+    RTI,
     AND,
     BIT,
     BVS,
