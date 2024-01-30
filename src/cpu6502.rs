@@ -587,7 +587,22 @@ impl Cpu6502 {
         self.status_flags
             .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
         self.status_flags
-            .set_flag(status_reg::Flag::Negative, (self.accumulator & 1 << 7) == 1);
+            .set_flag(status_reg::Flag::Negative, (self.accumulator & 1 << 7) != 0);
+    }
+
+    fn bit(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        let and_result = self.memory.get_byte(addr) & self.accumulator;
+        self.status_flags.set_flag(
+            status_reg::Flag::Negative,
+            (self.memory.get_byte(addr) & 1 << 7) != 0,
+        );
+        self.status_flags.set_flag(
+            status_reg::Flag::Overflow,
+            (self.memory.get_byte(addr) & 1 << 6) != 0,
+        );
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, and_result == 0);
     }
 
     fn asl(&mut self, mode: operation::AddressingMode) {
@@ -751,6 +766,7 @@ impl Cpu6502 {
                 operation::Instruction::PHP => self.php(),
                 operation::Instruction::ASL => self.asl(instruction.mode),
                 operation::Instruction::AND => self.and(instruction.mode),
+                operation::Instruction::BIT => self.bit(instruction.mode),
                 operation::Instruction::CLC => {
                     self.status_flags.set_flag(status_reg::Flag::Carry, false)
                 }
