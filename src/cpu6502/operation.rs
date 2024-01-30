@@ -1,6 +1,7 @@
 #[derive(Debug)]
 pub enum Instruction {
     ADC,
+    AND,
     SBC,
     LDX,
     LDY,
@@ -120,6 +121,20 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         }
         0x71 => {
             InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::ADC)
+        }
+
+        // AND
+        0x29 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::AND),
+        0x2d => InstructionMetadata::new(AddressingMode::Absolute, Instruction::AND),
+        0x3d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::AND),
+        0x39 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::AND),
+        0x25 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::AND),
+        0x35 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::AND),
+        0x21 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::AND)
+        }
+        0x31 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::AND)
         }
 
         // SBC

@@ -581,6 +581,15 @@ impl Cpu6502 {
             .set_flag(status_reg::Flag::Negative, false);
     }
 
+    fn and(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        self.accumulator = self.memory.get_byte(addr) & self.accumulator;
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
+        self.status_flags
+            .set_flag(status_reg::Flag::Negative, (self.accumulator & 1 << 7) == 1);
+    }
+
     fn asl(&mut self, mode: operation::AddressingMode) {
         match mode {
             operation::AddressingMode::Accumulator => {
@@ -741,6 +750,7 @@ impl Cpu6502 {
                 operation::Instruction::ROL => self.rol(instruction.mode),
                 operation::Instruction::PHP => self.php(),
                 operation::Instruction::ASL => self.asl(instruction.mode),
+                operation::Instruction::AND => self.and(instruction.mode),
                 operation::Instruction::CLC => {
                     self.status_flags.set_flag(status_reg::Flag::Carry, false)
                 }
@@ -790,6 +800,10 @@ impl Cpu6502 {
                 println!(
                     "Currently executing at {:?} instructions per second",
                     instructions_per_second
+                );
+                println!(
+                    "Have emulated {} instructions so far",
+                    self.instructions_executed
                 );
             }
         }
