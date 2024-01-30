@@ -44,6 +44,7 @@ pub enum Instruction {
     ROR,
     PHP,
     ASL,
+    ROL,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -317,6 +318,13 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         0x7e => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::ROR),
         0x66 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::ROR),
         0x76 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::ROR),
+
+        // ROL
+        0x2a => InstructionMetadata::new(AddressingMode::Accumulator, Instruction::ROL),
+        0x2e => InstructionMetadata::new(AddressingMode::Absolute, Instruction::ROL),
+        0x3e => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::ROL),
+        0x26 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::ROL),
+        0x36 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::ROL),
 
         // ASL
         0x0a => InstructionMetadata::new(AddressingMode::Accumulator, Instruction::ASL),

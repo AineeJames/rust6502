@@ -8,13 +8,38 @@
 const char* str = "Printing!\n";
 
 int main() {
-    *(uint8_t *)(CHROUT) = 'H';
-    *(uint8_t *)(CHROUT) = 'e';
-    *(uint8_t *)(CHROUT) = 'l';
-    *(uint8_t *)(CHROUT) = 'l';
-    *(uint8_t *)(CHROUT) = 'o';
-    *(uint8_t *)(CHROUT) = '\n';
-    for (;;);
+
+  int i = 100 / 10;
+  while (1) {
+    if (i % 3 == 0 && i % 5 == 0) {
+
+      *(uint8_t *)(CHROUT) = 'F';
+      *(uint8_t *)(CHROUT) = 'i';
+      *(uint8_t *)(CHROUT) = 'z';
+      *(uint8_t *)(CHROUT) = 'z';
+      *(uint8_t *)(CHROUT) = 'B';
+      *(uint8_t *)(CHROUT) = 'u';
+      *(uint8_t *)(CHROUT) = 'z';
+      *(uint8_t *)(CHROUT) = 'z';
+      *(uint8_t *)(CHROUT) = '\n';
+    } else if  (i % 3 == 0) {
+      *(uint8_t *)(CHROUT) = 'F';
+      *(uint8_t *)(CHROUT) = 'i';
+      *(uint8_t *)(CHROUT) = 'z';
+      *(uint8_t *)(CHROUT) = 'z';
+      *(uint8_t *)(CHROUT) = '\n';
+    } else if (i % 5 == 0) {
+
+      *(uint8_t *)(CHROUT) = 'B';
+      *(uint8_t *)(CHROUT) = 'u';
+      *(uint8_t *)(CHROUT) = 'z';
+      *(uint8_t *)(CHROUT) = 'z';
+      *(uint8_t *)(CHROUT) = '\n';
+    }
+
+    i++;
+  }
+  for (;;);
 }
 
 #pragma data-name(push, "RESETVEC")

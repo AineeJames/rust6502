@@ -474,33 +474,21 @@ impl Cpu6502 {
     }
 
     fn inx(&mut self) {
-        let result: u8 = if self.x_index == 0xFF {
-            0
-        } else {
-            self.x_index + 1
-        };
-
-        self.x_index = result;
+        self.x_index = self.x_index.wrapping_add(1);
 
         self.status_flags
-            .set_flag(status_reg::Flag::Negative, result & 0b10000000 != 0);
+            .set_flag(status_reg::Flag::Negative, self.x_index & 0b10000000 != 0);
         self.status_flags
-            .set_flag(status_reg::Flag::Zero, result == 0);
+            .set_flag(status_reg::Flag::Zero, self.x_index == 0);
     }
 
     fn iny(&mut self) {
-        let result: u8 = if self.y_index == 0xFF {
-            0
-        } else {
-            self.y_index + 1
-        };
-
-        self.y_index = result;
+        self.y_index = self.y_index.wrapping_add(1);
 
         self.status_flags
-            .set_flag(status_reg::Flag::Negative, result & 0b10000000 != 0);
+            .set_flag(status_reg::Flag::Negative, self.y_index & 0b10000000 != 0);
         self.status_flags
-            .set_flag(status_reg::Flag::Zero, result == 0);
+            .set_flag(status_reg::Flag::Zero, self.y_index == 0);
     }
 
     fn txa(&mut self) {
@@ -651,6 +639,37 @@ impl Cpu6502 {
         };
     }
 
+    fn rol(&mut self, mode: operation::AddressingMode) {
+        match mode {
+            operation::AddressingMode::Accumulator => {
+                let carry_before_shift = self.status_flags.c as u8;
+                self.status_flags
+                    .set_flag(status_reg::Flag::Negative, carry_before_shift == 1);
+                self.status_flags.set_flag(
+                    status_reg::Flag::Carry,
+                    (self.accumulator & 0b10000000) >> 7 == 1,
+                );
+                self.accumulator = self.accumulator << 1;
+                self.accumulator |= carry_before_shift;
+                self.status_flags
+                    .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
+            }
+            _ => {
+                let addr = self.get_addr(mode);
+                let mut val = self.memory.get_byte(addr);
+                let carry_before_shift = self.status_flags.c as u8;
+                self.status_flags
+                    .set_flag(status_reg::Flag::Negative, carry_before_shift == 1);
+                self.status_flags
+                    .set_flag(status_reg::Flag::Carry, (val & 0b10000000) >> 7 == 1);
+                val = val << 1;
+                val |= carry_before_shift;
+                self.memory.set_byte(addr, val);
+                self.status_flags.set_flag(status_reg::Flag::Zero, val == 0);
+            }
+        };
+    }
+
     fn php(&mut self) {
         let reg = self.status_flags.as_u8();
         self.push_stack(reg);
@@ -719,6 +738,7 @@ impl Cpu6502 {
                 operation::Instruction::TAY => self.tay(),
                 operation::Instruction::LSR => self.lsr(instruction.mode),
                 operation::Instruction::ROR => self.ror(instruction.mode),
+                operation::Instruction::ROL => self.rol(instruction.mode),
                 operation::Instruction::PHP => self.php(),
                 operation::Instruction::ASL => self.asl(instruction.mode),
                 operation::Instruction::CLC => {

@@ -11,7 +11,6 @@ To Implement:
 - AND
 - BRK
 - BIT
-- ROL
 - EOR
 - PLP
 - ORA
