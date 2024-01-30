@@ -21,7 +21,7 @@ space:
 newline:
   .byte $0A, $00
 counter:
-  .byte $01
+  .byte $01 ; start at 11 for testing
 
 .segment "CODE"
 
@@ -69,11 +69,18 @@ printcounter:
   lda counter
   clc
   jsr print_100s_place
-  ;jsr print_10s_place
-  ;jsr print_1s_place
+  ;if a > 100 -100
+  ;need to subtract to just tens here
+  clc
+  jsr print_10s_place
+  ;if a > 10 -10
+  
+  lda counter
+  clc
+  jsr print_1s_place
 
-  adc #$30 ; numb as char
-  sta CHOUT
+  ;adc #$30 ; numb as char
+  ;sta CHOUT
 
 endprintcounter:
   rts
@@ -83,24 +90,103 @@ print_100s_place:
   TXS
 
   cmp #100 
-  bne print_100s_end
+  beq print_100s_end
   ldx #0
   let_code_flow:  
   sbc #100
+  bcs stop_code_flow
+  bne not_zero
+  inx
+  jmp stop_code_flow
+  not_zero:
   inx
   cmp #100
-  beq let_code_flow
+  bne let_code_flow
+
+stop_code_flow:
 
   ;Get x to accumulator
   TXA 
+  clc
   adc #$30
   sta CHOUT
   
+  TXA 
+  cmp #0
+  bne skip_counter_assignment
+
+  lda counter
+  jmp print_100s_end
+
+  skip_counter_assignment:
+
+  sub_100s_loop:
+  sbc #100
+  dex
+  beq print_100s_end
+  jmp sub_100s_loop
+
+
+
+  jmp print_100s_end
   ;popx
-  TSX
 
 print_100s_end:
+  TSX
   rts
+
+print_10s_place:
+  txs
+  cmp #10
+  bcc stop_10s_flow
+  ldx #0
+  let_10s_flow:
+  sbc #10
+  bcs stop_10s_flow
+  bne not_zero_10s
+  jmp stop_10s_flow
+  not_zero_10s:
+  inx
+  cmp #10
+  bne let_10s_flow
+
+stop_10s_flow:
+  TXA
+  clc
+  adc #$30
+  sta CHOUT
+  
+  jmp print_10s_end
+
+
+
+print_10s_end:
+  TSX
+  rts
+
+print_1s_place:
+  txs
+  ;acc has num to print
+  cmp #10
+  bcc stop_1s_flow
+
+  sub_10s_loop:
+  sbc #10
+  cmp #10
+  bcc stop_1s_flow
+  jmp sub_10s_loop
+
+stop_1s_flow:
+  clc
+  adc #$30
+  sta CHOUT
+  jmp print_1s_end
+
+print_1s_end:
+  TSX
+  rts
+
+
 
 
 print:

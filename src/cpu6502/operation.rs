@@ -18,6 +18,8 @@ pub enum Instruction {
     JSR,
     RTS,
     CMP,
+    BCS,
+    BCC,
     BEQ,
     BNE,
     INC,
@@ -35,8 +37,6 @@ pub enum Instruction {
     SED,
     SEI,
     PHA,
-    BCS,
-    BCC,
     PLA,
     TAX,
     TAY,
@@ -134,6 +134,9 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         0xf1 => {
             InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::ADC)
         }
+
+        // BCC
+        0x90 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BCC),
 
         // LDX
         0xa2 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::LDX),
@@ -235,6 +238,9 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
             InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::CMP)
         }
 
+        // BCS
+        0xb0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BCS),
+
         // BEQ
         0xf0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BEQ),
 
@@ -288,12 +294,6 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
 
         // PHA
         0x48 => InstructionMetadata::new(AddressingMode::Implied, Instruction::PHA),
-
-        // BCS
-        0xb0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BCS),
-
-        // BCC
-        0x90 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BCC),
 
         // PLA
         0x68 => InstructionMetadata::new(AddressingMode::Implied, Instruction::PLA),

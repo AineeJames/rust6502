@@ -63,7 +63,7 @@ pub struct Cpu6502 {
     pub status_flags: status_reg::StatusFlags,
     pub cmdline_args: Args,
     pub start_time: Instant,
-    pub instructions_executed: usize,
+    pub instructions_executed: u128,
 }
 
 pub fn init_cpu6502(args: Args) -> Cpu6502 {
@@ -410,7 +410,7 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         let offset = self.memory.get_byte(addr) as i8;
         if self.status_flags.z {
-            let new_pc = self.program_counter + 2 + offset as u16;
+            let new_pc = (self.program_counter + 2).wrapping_add_signed(offset as i16);
             self.program_counter = new_pc;
         } else {
             self.program_counter += 2;
@@ -430,29 +430,27 @@ impl Cpu6502 {
         }
     }
 
-    fn bcs(&mut self, mode: operation::AddressingMode) {
-        let addr = self.get_addr(mode);
-        let offset = self.memory.get_byte(addr) as i8;
-        if self.status_flags.c {
-            let new_pc = (self.program_counter as i16)
-                .wrapping_add(2)
-                .wrapping_add(offset as i16) as u16;
-            self.program_counter = new_pc;
-        } else {
-            self.program_counter += 2;
-        }
-    }
-
     fn bcc(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         let offset = self.memory.get_byte(addr) as i8;
         if !self.status_flags.c {
-            let new_pc = (self.program_counter as i16)
-                .wrapping_add(2)
-                .wrapping_add(offset as i16) as u16;
+            debug!("Taking bcs branch");
+            let new_pc = (self.program_counter + 2).wrapping_add_signed(offset as i16);
             self.program_counter = new_pc;
         } else {
-            self.program_counter += 2;
+            self.program_counter += 2
+        }
+    }
+
+    fn bcs(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        let offset = self.memory.get_byte(addr) as i8;
+        if self.status_flags.c {
+            debug!("Taking bcs branch");
+            let new_pc = (self.program_counter + 2).wrapping_add_signed(offset as i16);
+            self.program_counter = new_pc;
+        } else {
+            self.program_counter += 2
         }
     }
 
@@ -680,7 +678,7 @@ impl Cpu6502 {
 
             match instruction.instruction_type {
                 operation::Instruction::ADC => self.adc(instruction.mode),
-                operation::Instruction::SBC => self.adc(instruction.mode),
+                operation::Instruction::SBC => self.sbc(instruction.mode),
                 operation::Instruction::STX => self.stx(instruction.mode),
                 operation::Instruction::STY => self.sty(instruction.mode),
                 operation::Instruction::LDX => self.ldx(instruction.mode),
@@ -750,6 +748,7 @@ impl Cpu6502 {
                     | operation::Instruction::RTS
                     | operation::Instruction::BEQ
                     | operation::Instruction::BCS
+                    | operation::Instruction::BNE
                     | operation::Instruction::BCC
             ) {
                 self.program_counter += instruction.instruction_byte_length as u16;
