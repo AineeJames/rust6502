@@ -28,7 +28,6 @@ impl Mem {
         self.memory[index as usize] = val;
         match MemMap::from_index(index) {
             MemMap::CHROUT => {
-                println!("HERE");
                 if let Some(char) = char::from_u32(val as u32) {
                     print!("{}", char);
                 } else {
