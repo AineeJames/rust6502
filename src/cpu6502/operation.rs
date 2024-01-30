@@ -1,6 +1,7 @@
 #[derive(Debug)]
 pub enum Instruction {
     ADC,
+    SBC,
     LDX,
     LDY,
     STX,
@@ -33,6 +34,16 @@ pub enum Instruction {
     SEC,
     SED,
     SEI,
+    PHA,
+    BCS,
+    BCC,
+    PLA,
+    TAX,
+    TAY,
+    LSR,
+    ROR,
+    PHP,
+    ASL,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -107,6 +118,20 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
             InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::ADC)
         }
         0x71 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::ADC)
+        }
+
+        // SBC
+        0xe9 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::SBC),
+        0xed => InstructionMetadata::new(AddressingMode::Absolute, Instruction::SBC),
+        0xfd => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::SBC),
+        0xf9 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::SBC),
+        0xe5 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::SBC),
+        0xf5 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::SBC),
+        0xe1 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::ADC)
+        }
+        0xf1 => {
             InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::ADC)
         }
 
@@ -260,6 +285,48 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
 
         // SEI
         0x78 => InstructionMetadata::new(AddressingMode::Implied, Instruction::SEI),
+
+        // PHA
+        0x48 => InstructionMetadata::new(AddressingMode::Implied, Instruction::PHA),
+
+        // BCS
+        0xb0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BCS),
+
+        // BCC
+        0x90 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BCC),
+
+        // PLA
+        0x68 => InstructionMetadata::new(AddressingMode::Implied, Instruction::PLA),
+
+        // TAX
+        0xaa => InstructionMetadata::new(AddressingMode::Implied, Instruction::TAX),
+
+        // TAY
+        0xa8 => InstructionMetadata::new(AddressingMode::Implied, Instruction::TAY),
+
+        // LSR
+        0x4a => InstructionMetadata::new(AddressingMode::Accumulator, Instruction::LSR),
+        0x4e => InstructionMetadata::new(AddressingMode::Absolute, Instruction::LSR),
+        0x5e => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::LSR),
+        0x46 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::LSR),
+        0x56 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::LSR),
+
+        // ROR
+        0x6a => InstructionMetadata::new(AddressingMode::Accumulator, Instruction::ROR),
+        0x6e => InstructionMetadata::new(AddressingMode::Absolute, Instruction::ROR),
+        0x7e => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::ROR),
+        0x66 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::ROR),
+        0x76 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::ROR),
+
+        // ASL
+        0x0a => InstructionMetadata::new(AddressingMode::Accumulator, Instruction::ASL),
+        0x0e => InstructionMetadata::new(AddressingMode::Absolute, Instruction::ASL),
+        0x1e => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::ASL),
+        0x06 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::ASL),
+        0x16 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::ASL),
+
+        // PHP
+        0x08 => InstructionMetadata::new(AddressingMode::Implied, Instruction::PHP),
         _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
     }
 }

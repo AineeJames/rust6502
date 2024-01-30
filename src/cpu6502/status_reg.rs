@@ -32,15 +32,17 @@ pub struct StatusFlags {
     pub c: bool,
 }
 impl StatusFlags {
-    pub fn print_status_flags_readable(&self) {
-        println!("Negative Flag: {}", self.n);
-        println!("Overflow Flag: {}", self.v);
-        println!("Unused Flag: {}", self.u);
-        println!("Break Flag: {}", self.b);
-        println!("Decimal Mode: {}", self.d);
-        println!("Interrupt Disable: {}", self.i);
-        println!("Zero Flag: {}", self.z);
-        println!("Carry Flag: {}\n", self.c);
+    pub fn print_status_flags_readable(&mut self) {
+        // println!("Negative Flag: {}", self.n);
+        // println!("Overflow Flag: {}", self.v);
+        // println!("Unused Flag: {}", self.u);
+        // println!("Break Flag: {}", self.b);
+        // println!("Decimal Mode: {}", self.d);
+        // println!("Interrupt Disable: {}", self.i);
+        // println!("Zero Flag: {}", self.z);
+        // println!("Carry Flag: {}\n", self.c);
+        println!("Flags: NOUBDIZC");
+        println!("       {:08b}", self.as_u8());
     }
     pub fn set_flag(&mut self, to_set_flag: Flag, flag_state: bool) {
         match to_set_flag {
@@ -53,5 +55,20 @@ impl StatusFlags {
             Flag::Zero => self.z = flag_state,
             Flag::Carry => self.c = flag_state,
         }
+    }
+
+    pub fn as_u8(&mut self) -> u8 {
+        let mut result = 0b00000000;
+
+        result |= (self.n as u8) << 7;
+        result |= (self.v as u8) << 6;
+        result |= (self.u as u8) << 5;
+        result |= (self.b as u8) << 4;
+        result |= (self.d as u8) << 3;
+        result |= (self.i as u8) << 2;
+        result |= (self.z as u8) << 1;
+        result |= self.c as u8;
+
+        result
     }
 }
