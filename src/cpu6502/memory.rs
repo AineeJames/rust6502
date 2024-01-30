@@ -33,7 +33,6 @@ impl Mem {
             MemMap::CHROUT => {
                 if let Some(char) = char::from_u32(val as u32) {
                     print!("{}", char);
-                    io::stdout().flush().unwrap();
                 }
             }
             MemMap::NOMAP => {}
