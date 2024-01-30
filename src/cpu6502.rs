@@ -1,5 +1,6 @@
 use crate::utils::pause::pause_for_input;
 use clap::Parser;
+use colored::Colorize;
 use log::debug;
 use std::time::Instant;
 use std::{fs, usize};
@@ -103,12 +104,16 @@ impl Cpu6502 {
             return;
         }
         self.status_flags.print_status_flags_readable();
-        println!("X register = 0x{:#>02x}", self.x_index);
-        println!("Y register = 0x{:#>02x}", self.y_index);
-        println!("Accumulator = 0x{:#>04x}", self.accumulator);
-        println!("Program Counter = 0x{:#>04x}", self.program_counter);
-        println!("Stack Pointer = 0x{:#>02x}", self.stack_pointer);
-        self.memory.dump_memory(self.cmdline_args.print_all_mem);
+        println!("X  = 0x{:#>02x}, {}", self.x_index, self.x_index);
+        println!("Y  = 0x{:#>02x}, {}", self.y_index, self.y_index);
+        println!("A  = 0x{:#>02x}, {}", self.accumulator, self.accumulator);
+        println!("{} = 0x{:#>04x}", "PC".blue(), self.program_counter);
+        println!("{} = 0x{:#>02x}", "SP".yellow(), self.stack_pointer);
+        self.memory.dump_memory(
+            self.cmdline_args.print_all_mem,
+            self.program_counter,
+            self.stack_pointer,
+        );
     }
 
     pub fn load_file_into_memory(&mut self) {
@@ -796,7 +801,9 @@ impl Cpu6502 {
         let carry_subtract = 1 - self.status_flags.c as u8; // Subtract carry (1's complement of carry)
         let mem_val: u16 = self.memory.get_byte(addr as usize) as u16;
         let overflow_flag_before_sub: bool = (self.accumulator & (1 << 7)) == 1;
-        let diff = self.accumulator as u16 - mem_val - carry_subtract as u16;
+        let diff = (self.accumulator as u16)
+            .wrapping_sub(mem_val)
+            .wrapping_sub(carry_subtract as u16);
         self.accumulator = diff as u8;
         self.status_flags
             .set_flag(status_reg::Flag::Carry, diff < 0x100);

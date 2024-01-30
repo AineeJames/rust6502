@@ -54,10 +54,10 @@ L0002:
 ;
 	jmp     L0008
 ;
-; uintptr_t physical_address = 0xFF00;
+; uintptr_t physical_address = 0x00FF;
 ;
-L0006:	ldx     #$FF
-	lda     #$00
+L0006:	ldx     #$00
+	lda     #$FF
 	jsr     pushax
 ;
 ; volatile uint16_t *memory_location = (uint16_t *)physical_address;

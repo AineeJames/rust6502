@@ -5,15 +5,12 @@
 int val = 43;
 const char* str = "Hello, World!\n";
 
-
-
 int main() {
     int i = 0;
     while (str[i] != 0) {
-        uintptr_t physical_address = 0xFF00;
+        uintptr_t physical_address = 0x00FF;
         volatile uint16_t *memory_location = (uint16_t *)physical_address;
         *memory_location = str[i];
-
         i++;
     }
     for (;;) {}
