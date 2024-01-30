@@ -187,8 +187,9 @@ impl Cpu6502 {
             ),
         };
         println!(
-            "\nNEXT INSTRUCTION: {:?} {}",
-            instruction.instruction_type, operand
+            "\nNEXT INSTRUCTION: {} {}",
+            format!("{:?}", instruction.instruction_type).green(),
+            operand
         );
     }
 
@@ -426,9 +427,10 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         let offset = self.memory.get_byte(addr) as i8;
         if !self.status_flags.z {
-            let new_pc = (self.program_counter as i16)
-                .wrapping_add(2)
-                .wrapping_add(offset as i16) as u16;
+            let new_pc = self
+                .program_counter
+                .wrapping_add_signed(2)
+                .wrapping_add_signed(offset as i16);
             self.program_counter = new_pc;
         } else {
             self.program_counter += 2;

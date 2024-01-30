@@ -2,18 +2,19 @@
 #include <stdint.h>
 #include <string.h>
 
-int val = 43;
-const char* str = "Hello, World!\n";
+#define CHROUT 0xFF00
+#define __BSS_RUN__ 0
+
+const char* str = "Printing!\n";
 
 int main() {
-    int i = 0;
-    while (str[i] != 0) {
-        uintptr_t physical_address = 0x00FF;
-        volatile uint16_t *memory_location = (uint16_t *)physical_address;
-        *memory_location = str[i];
-        i++;
-    }
-    for (;;) {}
+    *(uint8_t *)(CHROUT) = 'H';
+    *(uint8_t *)(CHROUT) = 'e';
+    *(uint8_t *)(CHROUT) = 'l';
+    *(uint8_t *)(CHROUT) = 'l';
+    *(uint8_t *)(CHROUT) = 'o';
+    *(uint8_t *)(CHROUT) = '\n';
+    for (;;);
 }
 
 #pragma data-name(push, "RESETVEC")

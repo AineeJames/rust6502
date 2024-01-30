@@ -10,17 +10,14 @@
 	.importzp	sp, sreg, regsave, regbank
 	.importzp	tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
 	.macpack	longbranch
-	.export		_val
 	.export		_str
 	.export		_main
 	.export		_RESETVEC
 
 .segment	"DATA"
 
-_val:
-	.word	$002B
 _str:
-	.addr	L0002
+	.addr	L0001
 .segment	"RESETVEC"
 _RESETVEC:
 	.word	$0F00
@@ -30,8 +27,8 @@ _RESETVEC:
 
 .segment	"RODATA"
 
-L0002:
-	.byte	$48,$65,$6C,$6C,$6F,$2C,$20,$57,$6F,$72,$6C,$64,$21,$0A,$00
+L0001:
+	.byte	$50,$72,$69,$6E,$74,$69,$6E,$67,$21,$0A,$00
 
 ; ---------------------------------------------------------------
 ; int __near__ main (void)
@@ -44,84 +41,50 @@ L0002:
 .segment	"CODE"
 
 ;
-; int i = 0;
+; *(uint8_t *)(CHROUT) = 'H';
 ;
 	ldx     #$00
-	lda     #$00
-	jsr     pushax
+	lda     #$48
+	sta     $FF00
 ;
-; while (str[i] != 0) {
+; *(uint8_t *)(CHROUT) = 'e';
 ;
-	jmp     L0008
-;
-; uintptr_t physical_address = 0x00FF;
-;
-L0006:	ldx     #$00
-	lda     #$FF
-	jsr     pushax
-;
-; volatile uint16_t *memory_location = (uint16_t *)physical_address;
-;
-	ldy     #$01
-	jsr     ldaxysp
-	jsr     pushax
-;
-; *memory_location = str[i];
-;
-	ldy     #$01
-	jsr     ldaxysp
-	jsr     pushax
-	lda     _str
-	ldx     _str+1
-	jsr     pushax
-	ldy     #$09
-	jsr     ldaxysp
-	jsr     tosaddax
-	ldy     #$00
-	jsr     ldauidx
 	ldx     #$00
-	ldy     #$00
-	jsr     staxspidx
+	lda     #$65
+	sta     $FF00
 ;
-; i++;
+; *(uint8_t *)(CHROUT) = 'l';
 ;
-	ldy     #$05
-	jsr     ldaxysp
-	sta     regsave
-	stx     regsave+1
-	jsr     incax1
-	ldy     #$04
-	jsr     staxysp
-	lda     regsave
-	ldx     regsave+1
+	ldx     #$00
+	lda     #$6C
+	sta     $FF00
+;
+; *(uint8_t *)(CHROUT) = 'l';
+;
+	ldx     #$00
+	lda     #$6C
+	sta     $FF00
+;
+; *(uint8_t *)(CHROUT) = 'o';
+;
+	ldx     #$00
+	lda     #$6F
+	sta     $FF00
+;
+; *(uint8_t *)(CHROUT) = '\n';
+;
+	ldx     #$00
+	lda     #$0A
+	sta     $FF00
+;
+; for (;;);
+;
+L0016:	jmp     L0019
+L0018:	jmp     L0016
+L0019:	jmp     L0018
 ;
 ; }
 ;
-	jsr     incsp4
-;
-; while (str[i] != 0) {
-;
-L0008:	lda     _str
-	ldx     _str+1
-	jsr     pushax
-	ldy     #$03
-	jsr     ldaxysp
-	jsr     tosaddax
-	ldy     #$00
-	jsr     ldauidx
-	cmp     #$00
-	jsr     boolne
-	jne     L0006
-;
-; for (;;) {}
-;
-L0007:	jmp     L0014
-L0013:	jmp     L0007
-L0014:	jmp     L0013
-;
-; }
-;
-	jsr     incsp2
 	rts
 
 .endproc

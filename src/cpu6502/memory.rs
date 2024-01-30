@@ -1,5 +1,7 @@
 use crate::cpu6502::MEM_SIZE;
 use colored::Colorize;
+use log::debug;
+use std::io::{self, Write};
 
 enum MemMap {
     CHROUT,
@@ -25,13 +27,13 @@ impl Mem {
         }
     }
     pub fn set_byte(&mut self, index: usize, val: u8) {
+        debug!("set addr 0x{:#>04x} to 0x{:#>02x}", index, val);
         self.memory[index as usize] = val;
         match MemMap::from_index(index) {
             MemMap::CHROUT => {
                 if let Some(char) = char::from_u32(val as u32) {
                     print!("{}", char);
-                } else {
-                    print!("");
+                    io::stdout().flush().unwrap();
                 }
             }
             MemMap::NOMAP => {}
