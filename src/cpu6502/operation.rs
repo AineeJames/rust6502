@@ -5,6 +5,9 @@ pub enum Instruction {
     BIT,
     BVS,
     BVC,
+    BPL,
+    BMI,
+    EOR,
     SBC,
     LDX,
     LDY,
@@ -42,6 +45,7 @@ pub enum Instruction {
     SEI,
     PHA,
     PLA,
+    PLP,
     TAX,
     TAY,
     LSR,
@@ -207,6 +211,20 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         // DEY
         0x88 => InstructionMetadata::new(AddressingMode::Implied, Instruction::DEY),
 
+        // EOR
+        0x49 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::EOR),
+        0x4d => InstructionMetadata::new(AddressingMode::Absolute, Instruction::EOR),
+        0x5d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::EOR),
+        0x59 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::EOR),
+        0x45 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::EOR),
+        0x55 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::EOR),
+        0x41 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::EOR)
+        }
+        0x51 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::EOR)
+        }
+
         // JMP
         0x4c => InstructionMetadata::new(AddressingMode::Absolute, Instruction::JMP),
         0x6c => InstructionMetadata::new(AddressingMode::AbsoluteIndirect, Instruction::JMP),
@@ -227,6 +245,9 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         0xb1 => {
             InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::LDA)
         }
+
+        // PLP
+        0x28 => InstructionMetadata::new(AddressingMode::Implied, Instruction::PLP),
 
         // STA
         0x8d => InstructionMetadata::new(AddressingMode::Absolute, Instruction::STA),
@@ -269,6 +290,12 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
 
         // BNE
         0xd0 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BNE),
+
+        // BMI
+        0x30 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BMI),
+
+        // BPL
+        0x10 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BPL),
 
         // BVS
         0x70 => InstructionMetadata::new(AddressingMode::Relative, Instruction::BVS),

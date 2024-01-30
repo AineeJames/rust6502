@@ -465,6 +465,34 @@ impl Cpu6502 {
         }
     }
 
+    fn bpl(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        let offset = self.memory.get_byte(addr) as i8;
+        if !self.status_flags.n {
+            let new_pc = self
+                .program_counter
+                .wrapping_add_signed(2)
+                .wrapping_add_signed(offset as i16);
+            self.program_counter = new_pc;
+        } else {
+            self.program_counter += 2;
+        }
+    }
+
+    fn bmi(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        let offset = self.memory.get_byte(addr) as i8;
+        if self.status_flags.n {
+            let new_pc = self
+                .program_counter
+                .wrapping_add_signed(2)
+                .wrapping_add_signed(offset as i16);
+            self.program_counter = new_pc;
+        } else {
+            self.program_counter += 2;
+        }
+    }
+
     fn bcc(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
         let offset = self.memory.get_byte(addr) as i8;
@@ -487,6 +515,15 @@ impl Cpu6502 {
         } else {
             self.program_counter += 2
         }
+    }
+
+    fn eor(&mut self, mode: operation::AddressingMode) {
+        let addr = self.get_addr(mode);
+        self.accumulator = self.accumulator ^ self.memory.get_byte(addr);
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
+        self.status_flags
+            .set_flag(status_reg::Flag::Negative, (self.accumulator & 1 << 7) != 0);
     }
 
     fn inc(&mut self, mode: operation::AddressingMode) {
@@ -568,6 +605,28 @@ impl Cpu6502 {
             status_reg::Flag::Negative,
             self.accumulator & 0b10000000 != 0,
         );
+    }
+
+    fn plp(&mut self) {
+        // TODO:bettery way to set all of the flags
+        let new_status = self.pop_stack();
+        self.status_flags
+            .set_flag(status_reg::Flag::Negative, (new_status & 1 << 7) != 0);
+
+        self.status_flags
+            .set_flag(status_reg::Flag::Overflow, (new_status & 1 << 6) != 0);
+
+        self.status_flags
+            .set_flag(status_reg::Flag::DecimalMode, (new_status & 1 << 3) != 0);
+
+        self.status_flags
+            .set_flag(status_reg::Flag::Interrupt, (new_status & 1 << 2) != 0);
+
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, (new_status & 1 << 1) != 0);
+
+        self.status_flags
+            .set_flag(status_reg::Flag::Carry, (new_status & 1) != 0);
     }
 
     fn tax(&mut self) {
@@ -766,6 +825,7 @@ impl Cpu6502 {
                 operation::Instruction::DEC => self.dec(instruction.mode),
                 operation::Instruction::DEX => self.dex(),
                 operation::Instruction::DEY => self.dey(),
+                operation::Instruction::EOR => self.eor(instruction.mode),
                 operation::Instruction::JMP => self.jmp(instruction.mode),
                 operation::Instruction::NOP => {}
                 operation::Instruction::LDA => self.lda(instruction.mode),
@@ -773,8 +833,10 @@ impl Cpu6502 {
                 operation::Instruction::JSR => self.jsr(instruction.mode),
                 operation::Instruction::RTS => self.rts(),
                 operation::Instruction::CMP => self.cmp(instruction.mode),
+                operation::Instruction::BPL => self.bpl(instruction.mode),
                 operation::Instruction::BEQ => self.beq(instruction.mode),
                 operation::Instruction::BNE => self.bne(instruction.mode),
+                operation::Instruction::BMI => self.bmi(instruction.mode),
                 operation::Instruction::BVS => self.bvs(instruction.mode),
                 operation::Instruction::BVC => self.bvc(instruction.mode),
                 operation::Instruction::INC => self.inc(instruction.mode),
@@ -786,6 +848,7 @@ impl Cpu6502 {
                 operation::Instruction::TYA => self.tya(),
                 operation::Instruction::PHA => self.pha(),
                 operation::Instruction::PLA => self.pla(),
+                operation::Instruction::PLP => self.plp(),
                 operation::Instruction::BCS => self.bcs(instruction.mode),
                 operation::Instruction::BCC => self.bcc(instruction.mode),
                 operation::Instruction::TAX => self.tax(),
