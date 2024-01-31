@@ -16,7 +16,7 @@ use std::process;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::TryRecvError;
-use std::thread;
+use std::thread::{self, JoinHandle};
 
 const MEM_SIZE: usize = 65536;
 
@@ -116,6 +116,11 @@ fn bcd_to_u8(byte: u8) -> Option<u8> {
     } else {
         Some(high_nibble * 10 + low_nibble)
     }
+}
+
+struct Workaround {
+    receiver: Receiver<String>,
+    handle: JoinHandle<()>,
 }
 
 impl Cpu6502 {
@@ -850,10 +855,9 @@ impl Cpu6502 {
         }
         return true;
     }
-
-    fn spawn_stdin_channel(&self) -> Receiver<String> {
+    fn spawn_stdin_channel(&self) -> Workaround {
         let (tx, rx) = mpsc::channel::<String>();
-        thread::spawn(move || loop {
+        let handle = thread::spawn(move || loop {
             let keys = io::stdin().keys();
             for c in keys {
                 match c.unwrap() {
@@ -866,7 +870,11 @@ impl Cpu6502 {
                 };
             }
         });
-        rx
+        let workaround: Workaround = Workaround {
+            receiver: rx,
+            handle: handle,
+        };
+        workaround
     }
 
     pub fn run(&mut self) {
@@ -874,12 +882,14 @@ impl Cpu6502 {
             (self.memory.get_byte(0xfffd) as u16) << 8 | self.memory.get_byte(0xfffc) as u16;
         self.program_counter = rvec;
 
-        let mut handles = vec![];
-
         stdout().into_raw_mode().unwrap();
-        let stdin_channel = self.spawn_stdin_channel();
+        let hack = self.spawn_stdin_channel();
+        let stdin_channel = hack.receiver;
         loop {
-            if !self.check_for_input(&stdin_channel) {}
+            if !self.check_for_input(&stdin_channel) {
+                hack.handle.join().unwrap();
+                return;
+            }
 
             self.print_state();
             let cur_opcode = self.get_next_byte();
