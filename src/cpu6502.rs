@@ -8,10 +8,12 @@ use std::{fs, usize};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
+use termion::{async_stdin, AsyncReader};
 pub mod memory;
 pub mod operation;
 pub mod status_reg;
 use std::io;
+use std::io::{Read, Write};
 use std::process;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
@@ -116,11 +118,6 @@ fn bcd_to_u8(byte: u8) -> Option<u8> {
     } else {
         Some(high_nibble * 10 + low_nibble)
     }
-}
-
-struct Workaround {
-    receiver: Receiver<String>,
-    handle: JoinHandle<()>,
 }
 
 impl Cpu6502 {
@@ -841,40 +838,17 @@ impl Cpu6502 {
         return self.memory.get_byte(stack_addr as usize);
     }
 
-    fn check_for_input(&mut self, stdin_channel: &Receiver<String>) -> bool {
-        match stdin_channel.try_recv() {
-            Ok(key) => match key.as_str() {
-                "kill" => return false,
-                _ => self.memory.set_byte(
-                    memory::MemMap::CHRIN as usize,
-                    key.chars().next().unwrap() as u8,
-                ),
-            },
-            Err(TryRecvError::Empty) => {}
-            Err(TryRecvError::Disconnected) => panic!("Input channel disconnected"),
-        }
-        return true;
-    }
-    fn spawn_stdin_channel(&self) -> Workaround {
-        let (tx, rx) = mpsc::channel::<String>();
-        let handle = thread::spawn(move || loop {
-            let keys = io::stdin().keys();
-            for c in keys {
-                match c.unwrap() {
-                    Key::Char(chr) => tx.send(format!("{}", chr)),
-                    Key::Ctrl('c') => {
-                        tx.send(format!("kill"));
-                        break;
-                    }
-                    _ => Ok({}),
-                };
-            }
-        });
-        let workaround: Workaround = Workaround {
-            receiver: rx,
-            handle: handle,
+    fn check_for_input(&mut self, stdin_channel: &mut std::io::Bytes<AsyncReader>) {
+        let current_char = stdin_channel.next();
+        let unwrapped_char = match current_char {
+            Some(c) => c,
+            None => return,
         };
-        workaround
+
+        match unwrapped_char {
+            Ok(c) => self.memory.set_byte(memory::MemMap::CHRIN as usize, c),
+            Err(_e) => {}
+        }
     }
 
     pub fn run(&mut self) {
@@ -883,13 +857,10 @@ impl Cpu6502 {
         self.program_counter = rvec;
 
         stdout().into_raw_mode().unwrap();
-        let hack = self.spawn_stdin_channel();
-        let stdin_channel = hack.receiver;
+
+        let mut stdin_itr = termion::async_stdin().bytes();
         loop {
-            if !self.check_for_input(&stdin_channel) {
-                hack.handle.join().unwrap();
-                return;
-            }
+            self.check_for_input(&mut stdin_itr);
 
             self.print_state();
             let cur_opcode = self.get_next_byte();
