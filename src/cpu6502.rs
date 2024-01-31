@@ -126,6 +126,16 @@ impl Cpu6502 {
         self.memory.set_all(code);
     }
 
+    fn bcd_to_u8(self, byte: u8) -> Option<u8> {
+        let low_nibble = byte & 0xF;
+        let high_nibble = (byte >> 4) & 0xF;
+        if low_nibble > 9 || high_nibble > 9 {
+            None
+        } else {
+            Some(high_nibble * 10 + low_nibble)
+        }
+    }
+
     fn get_next_byte(&mut self) -> u8 {
         let instruction: u8 = *self.memory.get(self.program_counter as usize).unwrap();
         return instruction;
