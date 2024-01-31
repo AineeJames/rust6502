@@ -151,6 +151,9 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         0x2c => InstructionMetadata::new(AddressingMode::Absolute, Instruction::BIT),
         0x24 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::BIT),
 
+        // BRK
+        0x00 => InstructionMetadata::new(AddressingMode::Implied, Instruction::BRK),
+
         // SBC
         0xe9 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::SBC),
         0xed => InstructionMetadata::new(AddressingMode::Absolute, Instruction::SBC),
@@ -235,6 +238,20 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
         // NOP
         0xea => InstructionMetadata::new(AddressingMode::Implied, Instruction::NOP),
 
+        // ORA
+        0x09 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::ORA),
+        0x0d => InstructionMetadata::new(AddressingMode::Absolute, Instruction::ORA),
+        0x1d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::ORA),
+        0x19 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::ORA),
+        0x05 => InstructionMetadata::new(AddressingMode::ZeroPage, Instruction::ORA),
+        0x15 => InstructionMetadata::new(AddressingMode::ZeroPageX, Instruction::ORA),
+        0x01 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedX, Instruction::ORA)
+        }
+        0x11 => {
+            InstructionMetadata::new(AddressingMode::ZeroPageIndirectIndexedY, Instruction::ORA)
+        }
+
         // LDA
         0xa9 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::LDA),
         0xad => InstructionMetadata::new(AddressingMode::Absolute, Instruction::LDA),
@@ -270,6 +287,9 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
 
         // RTS
         0x60 => InstructionMetadata::new(AddressingMode::Implied, Instruction::RTS),
+
+        // RTI
+        0x40 => InstructionMetadata::new(AddressingMode::Implied, Instruction::RTI),
 
         // CMP
         0xc9 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::CMP),
