@@ -927,6 +927,10 @@ impl Cpu6502 {
                     | operation::Instruction::BCS
                     | operation::Instruction::BNE
                     | operation::Instruction::BCC
+                    | operation::Instruction::BVC
+                    | operation::Instruction::BVS
+                    | operation::Instruction::BPL
+                    | operation::Instruction::BMI
             ) {
                 self.program_counter += instruction.instruction_byte_length as u16;
             }
