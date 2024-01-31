@@ -36,6 +36,7 @@ impl Mem {
                     print!("{}", char);
                 }
             }
+            MemMap::CHRIN => println!("Got character from keyboard {}", val),
             _ => {}
         }
     }

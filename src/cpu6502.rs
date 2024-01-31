@@ -856,11 +856,14 @@ impl Cpu6502 {
             (self.memory.get_byte(0xfffd) as u16) << 8 | self.memory.get_byte(0xfffc) as u16;
         self.program_counter = rvec;
 
-        stdout().into_raw_mode().unwrap();
+        let stdout = stdout();
+
+        let mut stdout = stdout.into_raw_mode().unwrap();
 
         let mut stdin_itr = termion::async_stdin().bytes();
         loop {
             self.check_for_input(&mut stdin_itr);
+            stdout.flush().unwrap();
 
             self.print_state();
             let cur_opcode = self.get_next_byte();
