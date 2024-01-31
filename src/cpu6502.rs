@@ -2,12 +2,12 @@ use crate::utils::pause::pause_for_input;
 use clap::Parser;
 use colored::Colorize;
 use log::debug;
-use std::io::stdout;
+use std::io::{stdout, Stdout};
 use std::time::Instant;
 use std::{fs, usize};
 use termion::event::Key;
 use termion::input::TermRead;
-use termion::raw::IntoRawMode;
+use termion::raw::{IntoRawMode, RawTerminal};
 use termion::{async_stdin, AsyncReader};
 pub mod memory;
 pub mod operation;
@@ -64,6 +64,15 @@ pub struct Args {
         default_value_t = false
     )]
     pub instrumentation: bool,
+
+    // Enable keyboard input
+    #[arg(
+        help = "Enable keyboard interaction",
+        short,
+        long,
+        default_value_t = false
+    )]
+    pub keyboard: bool,
 }
 
 pub struct Cpu6502 {
@@ -838,7 +847,8 @@ impl Cpu6502 {
         return self.memory.get_byte(stack_addr as usize);
     }
 
-    fn check_for_input(&mut self, stdin_channel: &mut std::io::Bytes<AsyncReader>) {
+    fn check_for_input(&mut self) {
+        let mut stdin_channel = termion::async_stdin().bytes();
         let current_char = stdin_channel.next();
         let unwrapped_char = match current_char {
             Some(c) => c,
@@ -856,14 +866,18 @@ impl Cpu6502 {
             (self.memory.get_byte(0xfffd) as u16) << 8 | self.memory.get_byte(0xfffc) as u16;
         self.program_counter = rvec;
 
-        let stdout = stdout();
-
-        let mut stdout = stdout.into_raw_mode().unwrap();
-
-        let mut stdin_itr = termion::async_stdin().bytes();
         loop {
-            self.check_for_input(&mut stdin_itr);
-            stdout.flush().unwrap();
+            stdout().flush().unwrap();
+            if self.cmdline_args.keyboard {
+                // TODO: This explodes
+                todo!("Need to implement keyboard");
+                /*
+                let stdout_handle = stdout();
+                let mut termion_handle = stdout_handle.into_raw_mode().unwrap();
+                self.check_for_input();
+                termion_handle.flush().unwrap();
+                */
+            }
 
             self.print_state();
             let cur_opcode = self.get_next_byte();
