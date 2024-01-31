@@ -608,7 +608,6 @@ impl Cpu6502 {
     }
 
     fn plp(&mut self) {
-        // TODO:bettery way to set all of the flags
         let new_status = self.pop_stack();
         self.status_flags
             .set_flag(status_reg::Flag::Negative, (new_status & 1 << 7) != 0);
@@ -750,14 +749,19 @@ impl Cpu6502 {
         };
     }
 
-
     fn brk(&mut self, mode: operation::AddressingMode) {
         todo!("Need to implement brk");
     }
 
-    
     fn ora(&mut self, mode: operation::AddressingMode) {
-        todo!("Need to implement ora");
+        let addr = self.get_addr(mode);
+        self.accumulator |= self.memory.get_byte(addr);
+        self.status_flags
+            .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
+        self.status_flags.set_flag(
+            status_reg::Flag::Negative,
+            self.accumulator & 0b10000000 != 0,
+        );
     }
 
     fn rti(&mut self, mode: operation::AddressingMode) {
@@ -799,7 +803,6 @@ impl Cpu6502 {
         let reg = self.status_flags.as_u8();
         self.push_stack(reg);
     }
-
 
     fn push_stack(&mut self, value: u8) {
         let stack_addr = 0x0100 | (self.stack_pointer as u16);
@@ -877,7 +880,7 @@ impl Cpu6502 {
                 operation::Instruction::BIT => self.bit(instruction.mode),
                 operation::Instruction::BRK => self.brk(instruction.mode),
                 operation::Instruction::ORA => self.ora(instruction.mode),
-                operation::Instruction::BRK => self.rti(instruction.mode),
+                operation::Instruction::RTI => self.rti(instruction.mode),
                 operation::Instruction::CLC => {
                     self.status_flags.set_flag(status_reg::Flag::Carry, false)
                 }
