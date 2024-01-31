@@ -1,6 +1,6 @@
 .setcpu "6502"
 
-.define CHOUT $FF00
+.define CHOUT $FE00
 
 .segment "DATA"
 hello: 

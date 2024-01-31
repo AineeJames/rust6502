@@ -867,7 +867,6 @@ impl Cpu6502 {
         self.program_counter = rvec;
 
         loop {
-            stdout().flush().unwrap();
             if self.cmdline_args.keyboard {
                 // TODO: This explodes
                 todo!("Need to implement keyboard");
