@@ -1,7 +1,6 @@
 use crate::cpu6502::MEM_SIZE;
 use colored::Colorize;
 use log::debug;
-use std::io::{self, Write};
 
 enum MemMap {
     CHROUT,
