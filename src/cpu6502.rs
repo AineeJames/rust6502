@@ -98,6 +98,16 @@ enum Index {
     Y,
 }
 
+fn bcd_to_u8(byte: u8) -> Option<u8> {
+    let low_nibble = byte & 0xF;
+    let high_nibble = (byte >> 4) & 0xF;
+    if low_nibble > 9 || high_nibble > 9 {
+        None
+    } else {
+        Some(high_nibble * 10 + low_nibble)
+    }
+}
+
 impl Cpu6502 {
     pub fn print_state(&mut self) {
         if self.cmdline_args.no_print {
@@ -124,16 +134,6 @@ impl Cpu6502 {
             Err(error) => panic!("Problem opening the file: {:?}", error),
         };
         self.memory.set_all(code);
-    }
-
-    fn bcd_to_u8(self, byte: u8) -> Option<u8> {
-        let low_nibble = byte & 0xF;
-        let high_nibble = (byte >> 4) & 0xF;
-        if low_nibble > 9 || high_nibble > 9 {
-            None
-        } else {
-            Some(high_nibble * 10 + low_nibble)
-        }
     }
 
     fn get_next_byte(&mut self) -> u8 {
@@ -994,5 +994,31 @@ impl Cpu6502 {
             status_reg::Flag::Negative,
             self.accumulator & 0b10000000 != 0,
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::cpu6502::bcd_to_u8;
+
+    #[test]
+    fn test_bcd_to_u8() {
+        // This assert would fire and test will fail.
+        // Please note, that private functions can be tested too!
+
+        match bcd_to_u8(0x11) {
+            Some(x) => assert_eq!(x, 11),
+            None => panic!("Got none for bcd_to_u8(0x11) should have gotten 11"),
+        };
+
+        match bcd_to_u8(0x21) {
+            Some(x) => assert_eq!(x, 21),
+            None => assert_ne!(0, 1),
+        };
+
+        match bcd_to_u8(0xF1) {
+            Some(x) => assert_eq!(x, 11),
+            None => assert!(true),
+        };
     }
 }
