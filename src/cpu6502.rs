@@ -2,11 +2,21 @@ use crate::utils::pause::pause_for_input;
 use clap::Parser;
 use colored::Colorize;
 use log::debug;
+use std::io::stdout;
 use std::time::Instant;
 use std::{fs, usize};
+use termion::event::Key;
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
 pub mod memory;
 pub mod operation;
 pub mod status_reg;
+use std::io;
+use std::process;
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc::TryRecvError;
+use std::thread;
 
 const MEM_SIZE: usize = 65536;
 
@@ -826,11 +836,51 @@ impl Cpu6502 {
         return self.memory.get_byte(stack_addr as usize);
     }
 
+    fn check_for_input(&mut self, stdin_channel: &Receiver<String>) -> bool {
+        match stdin_channel.try_recv() {
+            Ok(key) => match key.as_str() {
+                "kill" => return false,
+                _ => self.memory.set_byte(
+                    memory::MemMap::CHRIN as usize,
+                    key.chars().next().unwrap() as u8,
+                ),
+            },
+            Err(TryRecvError::Empty) => {}
+            Err(TryRecvError::Disconnected) => panic!("Input channel disconnected"),
+        }
+        return true;
+    }
+
+    fn spawn_stdin_channel(&self) -> Receiver<String> {
+        let (tx, rx) = mpsc::channel::<String>();
+        thread::spawn(move || loop {
+            let keys = io::stdin().keys();
+            for c in keys {
+                match c.unwrap() {
+                    Key::Char(chr) => tx.send(format!("{}", chr)),
+                    Key::Ctrl('c') => {
+                        tx.send(format!("kill"));
+                        break;
+                    }
+                    _ => Ok({}),
+                };
+            }
+        });
+        rx
+    }
+
     pub fn run(&mut self) {
         let rvec: u16 =
             (self.memory.get_byte(0xfffd) as u16) << 8 | self.memory.get_byte(0xfffc) as u16;
         self.program_counter = rvec;
+
+        let mut handles = vec![];
+
+        stdout().into_raw_mode().unwrap();
+        let stdin_channel = self.spawn_stdin_channel();
         loop {
+            if !self.check_for_input(&stdin_channel) {}
+
             self.print_state();
             let cur_opcode = self.get_next_byte();
             let instruction: operation::InstructionMetadata =

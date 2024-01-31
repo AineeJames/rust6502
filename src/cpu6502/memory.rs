@@ -1,17 +1,18 @@
 use crate::cpu6502::MEM_SIZE;
 use colored::Colorize;
 use log::debug;
-use std::io::{self, Write};
 
-enum MemMap {
-    CHROUT,
+pub enum MemMap {
+    CHROUT = 0xFE00,
+    CHRIN = 0xFE01,
     NOMAP,
 }
 
 impl MemMap {
-    fn from_index(index: usize) -> MemMap {
+    pub fn from_index(index: usize) -> MemMap {
         match index {
-            0xFF00 => MemMap::CHROUT,
+            0xFE00 => MemMap::CHROUT,
+            0xFE01 => MemMap::CHRIN,
             _ => MemMap::NOMAP,
         }
     }
@@ -35,7 +36,7 @@ impl Mem {
                     print!("{}", char);
                 }
             }
-            MemMap::NOMAP => {}
+            _ => {}
         }
     }
 
