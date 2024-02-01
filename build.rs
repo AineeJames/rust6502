@@ -3,6 +3,7 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
+    println!("cargo:rerun-if-changed=examples/");
     // Define the subdirectory path relative to the project root
     let subdirectory = "examples/";
 
@@ -26,5 +27,4 @@ fn main() {
     if !status.success() {
         panic!("`make` command failed with status: {}", status);
     }
-    println!("cargo:rerun-if-changed=examples/*");
 }
