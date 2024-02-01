@@ -1,24 +1,20 @@
 use crate::utils::pause::pause_for_input;
 use clap::Parser;
 use colored::Colorize;
+use crossterm::terminal::disable_raw_mode;
 use log::debug;
-use std::io::{stdout, Stdout};
 use std::time::Instant;
 use std::{fs, usize};
-use termion::event::Key;
-use termion::input::TermRead;
-use termion::raw::{IntoRawMode, RawTerminal};
-use termion::{async_stdin, AsyncReader};
 pub mod memory;
 pub mod operation;
 pub mod status_reg;
-use std::io;
-use std::io::{Read, Write};
-use std::process;
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-use std::sync::mpsc::TryRecvError;
-use std::thread::{self, JoinHandle};
+
+use futures::{future::FutureExt, select, StreamExt};
+
+use crossterm::{
+    event::{Event, EventStream, KeyCode, KeyModifiers},
+    terminal::enable_raw_mode,
+};
 
 const MEM_SIZE: usize = 65536;
 
@@ -847,18 +843,34 @@ impl Cpu6502 {
         return self.memory.get_byte(stack_addr as usize);
     }
 
-    fn check_for_input(&mut self) {
-        let mut stdin_channel = termion::async_stdin().bytes();
-        let current_char = stdin_channel.next();
-        let unwrapped_char = match current_char {
-            Some(c) => c,
-            None => return,
+    pub fn handle_keyboard(&mut self) -> bool {
+        let mut reader = EventStream::new();
+        let mut event = reader.next().fuse();
+        select! {
+            maybe_event = event => {
+                match maybe_event {
+                    Some(Ok(event)) => {
+                        if let Event::Key(key_event) = event{
+                            // println!("{:?},{:?}",key_event.code,key_event.modifiers);
+                            match key_event.code {
+                                KeyCode::Char(c) => {
+                                    self.memory.set_byte(memory::MemMap::CHRIN as usize, c as u8);
+                                }
+                                _ => {}
+                            }
+                            if key_event.code == KeyCode::Char('c') && key_event.modifiers == KeyModifiers::CONTROL {
+                                return false;
+                            }
+                            return true;
+                        }
+                    }
+                    Some(Err(_)) => return false,
+                    None => return true,
+                }
+            }
+            default => return true,
         };
-
-        match unwrapped_char {
-            Ok(c) => self.memory.set_byte(memory::MemMap::CHRIN as usize, c),
-            Err(_e) => {}
-        }
+        return true;
     }
 
     pub fn run(&mut self) {
@@ -868,14 +880,12 @@ impl Cpu6502 {
 
         loop {
             if self.cmdline_args.keyboard {
-                // TODO: This explodes
-                todo!("Need to implement keyboard");
-                /*
-                let stdout_handle = stdout();
-                let mut termion_handle = stdout_handle.into_raw_mode().unwrap();
-                self.check_for_input();
-                termion_handle.flush().unwrap();
-                */
+                enable_raw_mode().expect("Failed to enable raw mode.");
+                let success = self.handle_keyboard();
+                disable_raw_mode().expect("Failed to disable raw mode.");
+                if !success {
+                    return;
+                }
             }
 
             self.print_state();
