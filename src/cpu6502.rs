@@ -1053,23 +1053,19 @@ mod tests {
     use crate::cpu6502::bcd_to_u8;
 
     #[test]
-    fn test_bcd_to_u8() {
-        // This assert would fire and test will fail.
-        // Please note, that private functions can be tested too!
+    fn test_bcd_to_u8_valid_input() {
+        // Testing valid BCD inputs
+        assert_eq!(bcd_to_u8(0x11), Some(11), "0x11 should convert to 11");
+        assert_eq!(bcd_to_u8(0x21), Some(21), "0x21 should convert to 21");
+    }
 
-        match bcd_to_u8(0x11) {
-            Some(x) => assert_eq!(x, 11),
-            None => panic!("Got none for bcd_to_u8(0x11) should have gotten 11"),
-        };
-
-        match bcd_to_u8(0x21) {
-            Some(x) => assert_eq!(x, 21),
-            None => assert_ne!(0, 1),
-        };
-
-        match bcd_to_u8(0xF1) {
-            Some(x) => assert_eq!(x, 11),
-            None => assert!(true),
-        };
+    #[test]
+    fn test_bcd_to_u8_invalid_input() {
+        // Testing an invalid BCD input
+        // Assuming 0xF1 is not a valid BCD and should return None
+        assert!(
+            bcd_to_u8(0xF1).is_none(),
+            "0xF1 is not a valid BCD and should return None"
+        );
     }
 }
