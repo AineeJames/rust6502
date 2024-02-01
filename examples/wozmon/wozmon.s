@@ -17,18 +17,16 @@ MODE            = $2B           ;  $00=XAM, $7F=STOR, $AE=BLOCK XAM
 ; Other Variables
 
 IN              = $0200         ;  Input buffer to $027F
-KBD             = $D010         ;  PIA.A keyboard input
-KBDCR           = $D011         ;  PIA.A keyboard control register
-DSP             = $D012         ;  PIA.B display output register
-DSPCR           = $D013         ;  PIA.B display control register
+KBD             = $FE01         ;  PIA.A keyboard input
+DSP             = $FE00         ;  PIA.B display output register
 
 RESET:          CLD             ; Clear decimal arithmetic mode.
                 CLI
-                LDY #$7F        ; Mask for DSP data direction register.
-                STY DSP         ; Set it up.
-                LDA #$A7        ; KBD and DSP control register mask.
-                STA KBDCR       ; Enable interrupts, set CA1, CB1, for
-                STA DSPCR       ;  positive edge sense/output mode.
+                ;LDY #$7F        ; Mask for DSP data direction register.
+                ;STY DSP         ; Set it up.
+                ;LDA #$A7        ; KBD and DSP control register mask.
+                ;STA KBDCR       ; Enable interrupts, set CA1, CB1, for
+                ;STA DSPCR       ;  positive edge sense/output mode.
 NOTCR:          CMP #'_'+$80    ; "_"?
                 BEQ BACKSPACE   ; Yes.
                 CMP #$9B        ; ESC?
@@ -42,9 +40,13 @@ GETLINE:        LDA #$8D        ; CR.
                 LDY #$01        ; Initialize text index.
 BACKSPACE:      DEY             ; Back up text index.
                 BMI GETLINE     ; Beyond start of line, reinitialize.
-NEXTCHAR:       LDA KBDCR       ; Key ready?
-                BPL NEXTCHAR    ; Loop until ready.
-                LDA KBD         ; Load character. B7 should be ‘1’.
+NEXTCHAR:       LDA KBD         ; Key ready?
+                CMP #0
+                BEQ NEXTCHAR    ; Loop until ready.
+                PHA
+                LDA #0
+                STA KBD
+                PLA
                 STA IN,Y        ; Add to text buffer.
                 JSR ECHO        ; Display character.
                 CMP #$8D        ; CR?
@@ -128,7 +130,7 @@ XAMNEXT:        STX MODE        ; 0->MODE (XAM mode).
                 BNE MOD8CHK     ; Increment ‘examine index’.
                 INC XAMH
 MOD8CHK:        LDA XAML        ; Check low-order ‘examine index’ byte
-                AND #$07        ;  For MOD 8=0
+                AND #$07        ; For MOD 8=0
                 BPL NXTPRNT     ; Always taken.
 PRBYTE:         PHA             ; Save A for LSD.
                 LSR
@@ -142,9 +144,13 @@ PRHEX:          AND #$0F        ; Mask LSD for hex print.
                 CMP #$BA        ; Digit?
                 BCC ECHO        ; Yes, output it.
                 ADC #$06        ; Add offset for letter.
-ECHO:           BIT DSP         ; DA bit (B7) cleared yet?
-                BMI ECHO        ; No, wait for display.
+ECHO:                           ; DA bit (B7) cleared yet?
+                                ; No, wait for display.
                 STA DSP         ; Output character. Sets DA.
+                PHA
+                LDA #0
+                STA DSP
+                PLA
                 RTS             ; Return.
 
                 BRK             ; unused

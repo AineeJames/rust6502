@@ -1,6 +1,7 @@
 use crate::cpu6502::MEM_SIZE;
 use colored::Colorize;
 use log::debug;
+use std::io::Write;
 
 pub enum MemMap {
     CHROUT = 0xFE00,
@@ -34,6 +35,7 @@ impl Mem {
             MemMap::CHROUT => {
                 if let Some(char) = char::from_u32(val as u32) {
                     print!("{}", char);
+                    std::io::stdout().flush().expect("Could not flush :(")
                 }
             }
             // MemMap::CHRIN => println!("Char: {}\r", val as char),
