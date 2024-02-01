@@ -1,7 +1,8 @@
 use crate::cpu6502::MEM_SIZE;
 use colored::Colorize;
+use crossterm::{execute, terminal};
 use log::debug;
-use std::io::Write;
+use std::io::{stdout, Write};
 
 const BACKSPACE: u8 = 0x08;
 
@@ -40,7 +41,8 @@ impl Mem {
                     print!(" {}", 0x08 as char);
                 }
                 // println!("0x{:#>02x}\r", val);
-                std::io::stdout().flush().expect("Could not flush :(")
+                execute!(stdout(), terminal::LeaveAlternateScreen).unwrap();
+                std::io::stdout().flush().ok().expect("Could not flush :(");
             }
             // MemMap::CHRIN => println!("Char: {}\r", val as char),
             _ => {}
