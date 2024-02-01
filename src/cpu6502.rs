@@ -855,10 +855,10 @@ impl Cpu6502 {
                             // println!("{:?},{:?}",key_event.code,key_event.modifiers);
                             match key_event.code {
                                 KeyCode::Backspace => {
-                                    self.memory.set_byte(memory::MemMap::CHRIN as usize, 0x08);
+                                    self.memory.set_byte_wrap(memory::MemMap::CHRIN as usize, 0x08);
                                 }
                                 KeyCode::Char(c) => {
-                                    self.memory.set_byte(memory::MemMap::CHRIN as usize, c as u8);
+                                    self.memory.set_byte_wrap(memory::MemMap::CHRIN as usize, c as u8);
                                 }
                                 _ => {}
                             }
@@ -883,6 +883,7 @@ impl Cpu6502 {
         self.program_counter = rvec;
 
         let mut reader = EventStream::new();
+
         loop {
             if self.cmdline_args.keyboard {
                 enable_raw_mode().expect("Failed to enable raw mode.");

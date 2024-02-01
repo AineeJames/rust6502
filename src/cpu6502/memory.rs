@@ -31,6 +31,11 @@ impl Mem {
             memory: vec![0; MEM_SIZE],
         }
     }
+
+    pub fn set_byte_wrap(&mut self, index: usize, val: u8) {
+        self.set_byte(index, val);
+        std::io::stdout().flush().ok().expect("Could not flush :(");
+    }
     pub fn set_byte(&mut self, index: usize, val: u8) {
         debug!("set addr 0x{:#>04x} to 0x{:#>02x}", index, val);
         self.memory[index as usize] = val;
@@ -44,8 +49,8 @@ impl Mem {
                     print!(" {}", 0x08 as char);
                 }
                 //println!("0x{:#>02x}\r", val);
-                execute!(stdout(), terminal::LeaveAlternateScreen).unwrap();
-                std::io::stdout().flush().ok().expect("Could not flush :(");
+                //execute!(stdout(), terminal::LeaveAlternateScreen).unwrap();
+                //std::io::stdout().flush().ok().expect("Could not flush :(");
             }
             // MemMap::CHRIN => println!("Char: {}\r", val as char),
             _ => {}
