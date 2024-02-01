@@ -373,7 +373,7 @@ impl Cpu6502 {
     }
 
     fn dex(&mut self) {
-        self.x_index -= 1;
+        self.x_index = self.x_index.wrapping_sub(1);
         self.status_flags
             .set_flag(status_reg::Flag::Negative, self.x_index & 0b10000000 != 0);
         self.status_flags
@@ -381,7 +381,7 @@ impl Cpu6502 {
     }
 
     fn dey(&mut self) {
-        self.y_index -= 1;
+        self.y_index = self.y_index.wrapping_sub(1);
         self.status_flags
             .set_flag(status_reg::Flag::Negative, self.y_index & 0b10000000 != 0);
         self.status_flags
@@ -853,6 +853,9 @@ impl Cpu6502 {
                         if let Event::Key(key_event) = event{
                             // println!("{:?},{:?}",key_event.code,key_event.modifiers);
                             match key_event.code {
+                                KeyCode::Backspace => {
+                                    self.memory.set_byte(memory::MemMap::CHRIN as usize, 0x08);
+                                }
                                 KeyCode::Char(c) => {
                                     self.memory.set_byte(memory::MemMap::CHRIN as usize, c as u8);
                                 }

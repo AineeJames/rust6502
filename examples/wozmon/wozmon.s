@@ -27,19 +27,21 @@ RESET:          CLD             ; Clear decimal arithmetic mode.
                 ;LDA #$A7        ; KBD and DSP control register mask.
                 ;STA KBDCR       ; Enable interrupts, set CA1, CB1, for
                 ;STA DSPCR       ;  positive edge sense/output mode.
-NOTCR:          CMP #'_'+$80    ; "_"?
+NOTCR:          CMP #$08        ; BACKSPACE?
                 BEQ BACKSPACE   ; Yes.
                 CMP #$9B        ; ESC?
                 BEQ ESCAPE      ; Yes.
                 INY             ; Advance text index.
                 BPL NEXTCHAR    ; Auto ESC if > 127.
-ESCAPE:         LDA #'\'+$80    ; "\".
+ESCAPE:         LDA #'\'        ; "\".
                 JSR ECHO        ; Output it.
 GETLINE:        LDA #$8D        ; CR.
                 JSR ECHO        ; Output it.
                 LDY #$01        ; Initialize text index.
 BACKSPACE:      DEY             ; Back up text index.
                 BMI GETLINE     ; Beyond start of line, reinitialize.
+                LDA #$08
+                JSR ECHO
 NEXTCHAR:       LDA KBD         ; Key ready?
                 CMP #0
                 BEQ NEXTCHAR    ; Loop until ready.

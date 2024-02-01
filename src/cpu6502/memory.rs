@@ -3,6 +3,8 @@ use colored::Colorize;
 use log::debug;
 use std::io::Write;
 
+const BACKSPACE: u8 = 0x08;
+
 pub enum MemMap {
     CHROUT = 0xFE00,
     CHRIN = 0xFE01,
@@ -33,10 +35,12 @@ impl Mem {
         self.memory[index as usize] = val;
         match MemMap::from_index(index) {
             MemMap::CHROUT => {
-                if let Some(char) = char::from_u32(val as u32) {
-                    print!("{}", char);
-                    std::io::stdout().flush().expect("Could not flush :(")
+                print!("{}", val as char);
+                if val == BACKSPACE {
+                    print!(" {}", 0x08 as char);
                 }
+                // println!("0x{:#>02x}\r", val);
+                std::io::stdout().flush().expect("Could not flush :(")
             }
             // MemMap::CHRIN => println!("Char: {}\r", val as char),
             _ => {}
