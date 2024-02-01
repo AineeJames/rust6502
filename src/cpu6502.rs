@@ -1067,6 +1067,12 @@ mod tests {
         // Testing valid BCD inputs
         assert_eq!(bcd_to_u8(0x11), Some(11), "0x11 should convert to 11");
         assert_eq!(bcd_to_u8(0x21), Some(21), "0x21 should convert to 21");
+        assert_eq!(bcd_to_u8(0x33), Some(33), "0x33 should convert to 33");
+        assert_eq!(bcd_to_u8(0x45), Some(45), "0x45 should convert to 45");
+        assert_eq!(bcd_to_u8(0x18), Some(18), "0x18 should convert to 18");
+        assert_eq!(bcd_to_u8(0x31), Some(31), "0x31 should convert to 31");
+        assert_eq!(bcd_to_u8(0x19), Some(19), "0x19 should convert to 19");
+        assert_eq!(bcd_to_u8(0x99), Some(99), "0x99 should convert to 99");
     }
 
     #[test]
@@ -1076,6 +1082,16 @@ mod tests {
         assert!(
             bcd_to_u8(0xF1).is_none(),
             "0xF1 is not a valid BCD and should return None"
+        );
+
+        assert!(
+            bcd_to_u8(0xF5).is_none(),
+            "0xF5 is not a valid BCD and should return None"
+        );
+
+        assert!(
+            bcd_to_u8(0x0F).is_none(),
+            "0x0F is not a valid BCD and should return None"
         );
     }
 }
