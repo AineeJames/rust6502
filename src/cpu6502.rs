@@ -2,12 +2,14 @@ use crate::utils::pause::pause_for_input;
 use clap::Parser;
 use colored::Colorize;
 use crossterm::terminal::disable_raw_mode;
-use log::debug;
+use log::{debug, info};
 use std::time::Instant;
-use std::{fs, usize};
+use std::{fs, io, usize};
 pub mod memory;
 pub mod operation;
 pub mod status_reg;
+
+use std::io::Write;
 
 use futures::{future::FutureExt, select, StreamExt};
 
@@ -843,8 +845,7 @@ impl Cpu6502 {
         return self.memory.get_byte(stack_addr as usize);
     }
 
-    pub fn handle_keyboard(&mut self) -> bool {
-        let mut reader = EventStream::new();
+    pub fn handle_keyboard(&mut self, reader: &mut EventStream) -> bool {
         let mut event = reader.next().fuse();
         select! {
             maybe_event = event => {
@@ -881,10 +882,11 @@ impl Cpu6502 {
             (self.memory.get_byte(0xfffd) as u16) << 8 | self.memory.get_byte(0xfffc) as u16;
         self.program_counter = rvec;
 
+        let mut reader = EventStream::new();
         loop {
             if self.cmdline_args.keyboard {
                 enable_raw_mode().expect("Failed to enable raw mode.");
-                let success = self.handle_keyboard();
+                let success = self.handle_keyboard(&mut reader);
                 disable_raw_mode().expect("Failed to disable raw mode.");
                 if !success {
                     return;

@@ -16,6 +16,4 @@ fn main() {
 
     cpu.load_file_into_memory();
     cpu.run();
-
-    disable_raw_mode();
 }

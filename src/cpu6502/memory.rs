@@ -36,11 +36,14 @@ impl Mem {
         self.memory[index as usize] = val;
         match MemMap::from_index(index) {
             MemMap::CHROUT => {
+                if val == 0x0 {
+                    return;
+                }
                 print!("{}", val as char);
                 if val == BACKSPACE {
                     print!(" {}", 0x08 as char);
                 }
-                // println!("0x{:#>02x}\r", val);
+                //println!("0x{:#>02x}\r", val);
                 execute!(stdout(), terminal::LeaveAlternateScreen).unwrap();
                 std::io::stdout().flush().ok().expect("Could not flush :(");
             }
