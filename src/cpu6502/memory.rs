@@ -43,9 +43,9 @@ impl Mem {
                 }
                 if val == BACKSPACE {
                     print!("\u{0008}");
-                    std::io::stdout().flush().ok().expect("Could not flush :(");
+                    //std::io::stdout().flush().ok().expect("Could not flush :(");
                     print!(" ");
-                    std::io::stdout().flush().ok().expect("Could not flush :(");
+                    //std::io::stdout().flush().ok().expect("Could not flush :(");
                     print!("\u{0008}");
                     return;
                 }
