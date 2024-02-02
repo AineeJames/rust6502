@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Instruction {
     ADC,
     BRK,
@@ -77,7 +77,7 @@ pub enum AddressingMode {
     ZeroPageIndirectIndexedY,
 }
 
-fn get_addressing_mode_operand_length(mode: AddressingMode) -> u8 {
+const fn get_addressing_mode_operand_length(mode: AddressingMode) -> u8 {
     match mode {
         AddressingMode::Accumulator => 0,
         AddressingMode::Implied => 0,
@@ -97,10 +97,11 @@ fn get_addressing_mode_operand_length(mode: AddressingMode) -> u8 {
     }
 }
 
-fn get_instruction_length(mode: AddressingMode) -> u8 {
+const fn get_instruction_length(mode: AddressingMode) -> u8 {
     1 + get_addressing_mode_operand_length(mode)
 }
 
+#[derive(Copy, Clone)]
 pub struct InstructionMetadata {
     pub mode: AddressingMode,
     pub instruction_type: Instruction,
@@ -108,19 +109,26 @@ pub struct InstructionMetadata {
 }
 
 impl InstructionMetadata {
-    fn new(mode: AddressingMode, instruction: Instruction) -> InstructionMetadata {
+    const fn new(mode: AddressingMode, instruction: Instruction) -> InstructionMetadata {
         InstructionMetadata {
             mode,
             instruction_type: instruction,
             instruction_byte_length: get_instruction_length(mode),
         }
     }
+    const fn default() -> InstructionMetadata {
+        InstructionMetadata {
+            mode: AddressingMode::Implied,
+            instruction_type: Instruction::NOP,
+            instruction_byte_length: get_instruction_length(AddressingMode::Implied),
+        }
+    }
 }
 
-pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
+const fn create_instruction_metadata(opcode: u8) -> InstructionMetadata {
     match opcode {
-        // ADC
         0x69 => InstructionMetadata::new(AddressingMode::Immediate, Instruction::ADC),
+        // ... other cases ...
         0x6d => InstructionMetadata::new(AddressingMode::Absolute, Instruction::ADC),
         0x7d => InstructionMetadata::new(AddressingMode::AbsoluteXIndexed, Instruction::ADC),
         0x79 => InstructionMetadata::new(AddressingMode::AbsoluteYIndexed, Instruction::ADC),
@@ -413,6 +421,29 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
 
         // PHP
         0x08 => InstructionMetadata::new(AddressingMode::Implied, Instruction::PHP),
-        _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
+
+        _ => InstructionMetadata::default(), // default case for unmapped opcodes
     }
+}
+
+const OPCODE_METADATA: [InstructionMetadata; 256] = {
+    let mut table = [InstructionMetadata::default(); 256];
+    let mut i = 0;
+    while i < table.len() {
+        table[i] = create_instruction_metadata(i as u8);
+        i += 1;
+    }
+    table
+};
+
+pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
+    // get operation from const lookup table
+    let operation = OPCODE_METADATA[opcode as usize];
+    if opcode == 0xea {
+        match operation.instruction_type {
+            Instruction::NOP => {}
+            _ => todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode),
+        }
+    }
+    return operation;
 }
