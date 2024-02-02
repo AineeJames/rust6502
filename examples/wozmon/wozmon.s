@@ -72,11 +72,11 @@ NEXTHEX:        LDA IN,Y        ; Get character for hex test.
                 EOR #$30        ; Map digits to $0-9.
                 CMP #$0a        ; Digit?
                 BCC DIG         ; Yes.
+                EOR #$30        ; Map digits to $0-9.
                 SBC #$41        ; Map letter "A"-"F" to $FA-FF.
                 CMP #$05        ; Hex letter?
-                BCC NOTHEX      ; No, character not hex.
+                BCS NOTHEX      ; No, character not hex.
 DIG:            ASL
-                BRK
                 ASL             ; Hex digit to MSD of A.
                 ASL
                 ASL
@@ -139,6 +139,7 @@ PRBYTE:         PHA             ; Save A for LSD.
                 JSR PRHEX       ; Output hex digit.
                 PLA             ; Restore A.
 PRHEX:          AND #$0F        ; Mask LSD for hex print.
+                BRK
                 ORA #'0'+$80    ; Add "0".
                 CMP #$BA        ; Digit? meaning <= ALU
                 BCC ECHO        ; Yes, output it.

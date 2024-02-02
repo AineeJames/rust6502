@@ -818,8 +818,11 @@ impl Cpu6502 {
         match mode {
             operation::AddressingMode::Accumulator => {
                 let carry_before_shift = self.status_flags.c as u8;
-                self.status_flags
-                    .set_flag(status_reg::Flag::Negative, carry_before_shift == 1);
+
+                self.status_flags.set_flag(
+                    status_reg::Flag::Negative,
+                    (self.accumulator & 0b01000000) != 0,
+                );
                 self.status_flags.set_flag(
                     status_reg::Flag::Carry,
                     (self.accumulator & 0b10000000) >> 7 == 1,
@@ -834,7 +837,7 @@ impl Cpu6502 {
                 let mut val = self.memory.get_byte(addr);
                 let carry_before_shift = self.status_flags.c as u8;
                 self.status_flags
-                    .set_flag(status_reg::Flag::Negative, carry_before_shift == 1);
+                    .set_flag(status_reg::Flag::Negative, val & 0b01000000 != 0);
                 self.status_flags
                     .set_flag(status_reg::Flag::Carry, (val & 0b10000000) >> 7 == 1);
                 val = val << 1;
