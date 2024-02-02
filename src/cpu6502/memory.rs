@@ -2,7 +2,7 @@ use crate::cpu6502::MEM_SIZE;
 use colored::Colorize;
 use crossterm::{execute, terminal};
 use log::debug;
-use std::io::{stdout, Write};
+use std::io::{self, stdout, Write};
 
 const BACKSPACE: u8 = 0x08;
 
@@ -34,7 +34,7 @@ impl Mem {
 
     pub fn set_byte_wrap(&mut self, index: usize, val: u8) {
         self.set_byte(index, val);
-        std::io::stdout().flush().ok().expect("Could not flush :(");
+        //std::io::stdout().flush().ok().expect("Could not flush :(");
     }
     pub fn set_byte(&mut self, index: usize, val: u8) {
         debug!("set addr 0x{:#>04x} to 0x{:#>02x}", index, val);
@@ -44,7 +44,10 @@ impl Mem {
                 if val == 0x0 {
                     return;
                 }
-                print!("{}", val as char);
+
+                // more efficient writing of chracters to stdout
+                io::stdout().write_all(&[val]).unwrap();
+                //print!("{}", val as char);
                 if val == BACKSPACE {
                     print!(" {}", 0x08 as char);
                 }
