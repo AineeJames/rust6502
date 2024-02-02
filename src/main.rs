@@ -14,6 +14,12 @@ fn main() {
 
     let mut cpu: cpu6502::Cpu6502 = cpu6502::init_cpu6502(args);
 
+    ctrlc::set_handler(move || {
+        println!("received Ctrl+C!");
+        disable_raw_mode().expect("Failed to disable raw mode.");
+    })
+    .expect("Error setting Ctrl-C handler");
     cpu.load_file_into_memory();
     cpu.run();
+    // just to be sure
 }
