@@ -34,7 +34,7 @@ impl Mem {
 
     pub fn set_byte_wrap(&mut self, index: usize, val: u8) {
         self.set_byte(index, val);
-        //std::io::stdout().flush().ok().expect("Could not flush :(");
+        std::io::stdout().flush().ok().expect("Could not flush :(");
     }
     pub fn set_byte(&mut self, index: usize, val: u8) {
         debug!("set addr 0x{:#>04x} to 0x{:#>02x}", index, val);

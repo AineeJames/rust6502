@@ -35,7 +35,7 @@ NOTCR:          CMP #$08        ; BACKSPACE?
                 BPL NEXTCHAR    ; Auto ESC if > 127.
 ESCAPE:         LDA #'\'        ; "\".
                 JSR ECHO        ; Output it.
-GETLINE:        LDA #$0d        ; CR.
+GETLINE:        LDA #$0a        ; CR.
                 JSR ECHO        ; Output it.
                 LDY #$01        ; Initialize text index.
 BACKSPACE:      DEY             ; Back up text index.
