@@ -23,10 +23,6 @@ DSP             = $FE00         ;  PIA.B display output register
 RESET:          CLD             ; Clear decimal arithmetic mode.
                 CLI
                 LDY #$7F        ; Mask for DSP data direction register.
-                ;STY DSP         ; Set it up.
-                ;LDA #$A7        ; KBD and DSP control register mask.
-                ;STA KBDCR       ; Enable interrupts, set CA1, CB1, for
-                ;STA DSPCR       ;  positive edge sense/output mode.
 NOTCR:          CMP #$08        ; BACKSPACE?
                 BEQ BACKSPACE   ; Yes.
                 CMP #$9B        ; ESC?
@@ -40,7 +36,7 @@ GETLINE:        LDA #$0a        ; CR.
                 LDY #$01        ; Initialize text index.
 BACKSPACE:      DEY             ; Back up text index.
                 BMI GETLINE     ; Beyond start of line, reinitialize.
-                LDA #$08
+                LDA #$08        ; backspace
                 JSR ECHO
 NEXTCHAR:       LDA KBD         ; Key ready?
                 CMP #0
@@ -51,8 +47,8 @@ NEXTCHAR:       LDA KBD         ; Key ready?
                 PLA
                 STA IN,Y        ; Add to text buffer.
                 JSR ECHO        ; Display character.
-                CMP #$8D        ; CR?
-                BNE NOTCR       ; No.
+                CMP #$0d        ; CR?
+                BNE NOTCR       ; No so continue.
                 LDY #$FF        ; Reset text index.
                 LDA #$00        ; For XAM mode.
                 TAX             ; 0->X.
@@ -60,14 +56,14 @@ SETSTOR:        ASL             ; Leaves $7B if setting STOR mode.
 SETMODE:        STA MODE        ; $00=XAM, $7B=STOR, $AE=BLOCK XAM.
 BLSKIP:         INY             ; Advance text index.
 NEXTITEM:       LDA IN,Y        ; Get character.
-                CMP #$8D        ; CR?
+                CMP #$0d        ; CR?
                 BEQ GETLINE     ; Yes, done this line.
-                CMP #'.'+$80    ; "."?
+                CMP #'.'        ; "."?
                 BCC BLSKIP      ; Skip delimiter.
                 BEQ SETMODE     ; Set BLOCK XAM mode.
-                CMP #':'+$80    ; ":"?
+                CMP #':'        ; ":"?
                 BEQ SETSTOR     ; Yes. Set STOR mode.
-                CMP #'R'+$80    ; "R"?
+                CMP #'R'        ; "R"?
                 BEQ RUN         ; Yes. Run user program.
                 STX L           ; $00->L.
                 STX H           ;  and H.
@@ -110,13 +106,13 @@ SETADR:         LDA L-1,X       ; Copy hex data to
                 DEX             ; Next of 2 bytes.
                 BNE SETADR      ; Loop unless X=0.
 NXTPRNT:        BNE PRDATA      ; NE means no address to print.
-                LDA #$8D        ; CR.
+                LDA #$0D        ; CR.
                 JSR ECHO        ; Output it.
                 LDA XAMH        ; ‘Examine index’ high-order byte.
                 JSR PRBYTE      ; Output it in hex format.
                 LDA XAML        ; Low-order ‘examine index’ byte.
                 JSR PRBYTE      ; Output it in hex format.
-                LDA #':'+$80    ; ":".
+                LDA #':'        ; ":".
                 JSR ECHO        ; Output it.
 PRDATA:         LDA #$A0        ; Blank.
                 JSR ECHO        ; Output it.
@@ -143,7 +139,7 @@ PRBYTE:         PHA             ; Save A for LSD.
                 PLA             ; Restore A.
 PRHEX:          AND #$0F        ; Mask LSD for hex print.
                 ORA #'0'+$80    ; Add "0".
-                CMP #$BA        ; Digit?
+                CMP #$BA        ; Digit? meaning <= ALU
                 BCC ECHO        ; Yes, output it.
                 ADC #$06        ; Add offset for letter.
 ECHO:                           ; DA bit (B7) cleared yet?

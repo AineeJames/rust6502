@@ -295,6 +295,13 @@ impl Cpu6502 {
         return addr;
     }
 
+    pub fn set_byte_wrap(&mut self, index: usize, val: u8) {
+        self.memory.set_byte(index, val);
+        if self.cmdline_args.keyboard && index == memory::MemMap::CHROUT as usize {
+            std::io::stdout().flush().ok().expect("Could not flush :(");
+        }
+    }
+
     fn ldx(&mut self, mode: operation::AddressingMode) {
         // load from memory into x
         let addr = self.get_addr(mode);
@@ -318,13 +325,13 @@ impl Cpu6502 {
     fn stx(&mut self, mode: operation::AddressingMode) {
         // store index x into memory
         let addr = self.get_addr(mode);
-        self.memory.set_byte(addr, self.x_index);
+        self.set_byte_wrap(addr, self.x_index);
     }
 
     fn sty(&mut self, mode: operation::AddressingMode) {
         // store index y into memory
         let addr = self.get_addr(mode);
-        self.memory.set_byte(addr, self.y_index);
+        self.set_byte_wrap(addr, self.y_index);
     }
 
     fn cpx(&mut self, mode: operation::AddressingMode) {
@@ -408,7 +415,7 @@ impl Cpu6502 {
 
     fn sta(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
-        self.memory.set_byte(addr, self.accumulator);
+        self.set_byte_wrap(addr, self.accumulator);
     }
 
     fn jsr(&mut self, mode: operation::AddressingMode) {
@@ -559,7 +566,7 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         let value = self.memory.get_byte(addr);
         let new_value = value.wrapping_add(1);
-        self.memory.set_byte(addr, new_value);
+        self.set_byte_wrap(addr, new_value);
 
         self.status_flags
             .set_flag(status_reg::Flag::Zero, new_value == 0);
@@ -688,7 +695,7 @@ impl Cpu6502 {
                 self.status_flags
                     .set_flag(status_reg::Flag::Carry, (val & 0b1) == 1);
                 val = val >> 1;
-                self.memory.set_byte(addr, val);
+                self.set_byte_wrap(addr, val);
                 self.status_flags.set_flag(status_reg::Flag::Zero, val == 0);
             }
         };
@@ -743,7 +750,7 @@ impl Cpu6502 {
                 let result_msb = (val & 0b10000000) >> 7;
                 self.status_flags
                     .set_flag(status_reg::Flag::Negative, result_msb == 1);
-                self.memory.set_byte(addr, val);
+                self.set_byte_wrap(addr, val);
                 self.status_flags.set_flag(status_reg::Flag::Zero, val == 0);
             }
         };
@@ -772,7 +779,7 @@ impl Cpu6502 {
                     .set_flag(status_reg::Flag::Carry, (val & 0b1) == 1);
                 val = val >> 1;
                 val |= carry_before_shift << 7;
-                self.memory.set_byte(addr, val);
+                self.set_byte_wrap(addr, val);
                 self.status_flags.set_flag(status_reg::Flag::Zero, val == 0);
             }
         };
@@ -822,7 +829,7 @@ impl Cpu6502 {
                     .set_flag(status_reg::Flag::Carry, (val & 0b10000000) >> 7 == 1);
                 val = val << 1;
                 val |= carry_before_shift;
-                self.memory.set_byte(addr, val);
+                self.set_byte_wrap(addr, val);
                 self.status_flags.set_flag(status_reg::Flag::Zero, val == 0);
             }
         };
@@ -835,7 +842,7 @@ impl Cpu6502 {
 
     fn push_stack(&mut self, value: u8) {
         let stack_addr = 0x0100 | (self.stack_pointer as u16);
-        self.memory.set_byte(stack_addr as usize, value);
+        self.set_byte_wrap(stack_addr as usize, value);
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
     }
 
@@ -853,12 +860,16 @@ impl Cpu6502 {
                     Some(Ok(event)) => {
                         if let Event::Key(key_event) = event{
                             // println!("{:?},{:?}",key_event.code,key_event.modifiers);
+                            disable_raw_mode().expect("Failed to disable raw mode.");
                             match key_event.code {
                                 KeyCode::Backspace => {
-                                    self.memory.set_byte_wrap(memory::MemMap::CHRIN as usize, 0x08);
+                                    self.set_byte_wrap(memory::MemMap::CHRIN as usize, 0x08);
+                                }
+                                KeyCode::Enter => {
+                                    self.set_byte_wrap(memory::MemMap::CHRIN as usize, 0x0d);
                                 }
                                 KeyCode::Char(c) => {
-                                    self.memory.set_byte_wrap(memory::MemMap::CHRIN as usize, c as u8);
+                                    self.set_byte_wrap(memory::MemMap::CHRIN as usize, c as u8);
                                 }
                                 _ => {}
                             }
