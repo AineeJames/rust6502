@@ -1025,7 +1025,7 @@ impl Cpu6502 {
                 let instructions_per_second =
                     (self.instructions_executed * 1_000_000_000) as u128 / (duration as u128);
                 println!(
-                    "Currently executing at {:?} instructions per second",
+                    "\nCurrently executing at {:?} instructions per second",
                     instructions_per_second
                 );
                 println!(
