@@ -17,14 +17,6 @@ fn main() {
     if cpu.cmdline_args.keyboard {
         enable_raw_mode().expect("Failed to enable raw mode.");
     }
-    // TODO: be smarter to ctrl c and react and exit
-    // right now just stops from exiting until ctrl+c
-    // is caught in keyboard input function
-    ctrlc::set_handler(move || {
-        println!("received Ctrl+C!");
-        //disable_raw_mode().expect("Failed to disable raw mode.");
-    })
-    .expect("Error setting Ctrl-C handler");
 
     cpu.load_file_into_memory();
     cpu.run();
