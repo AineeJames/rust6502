@@ -36,6 +36,10 @@ pub struct Args {
     )]
     pub print_all_mem: bool,
 
+    // dump info on exit
+    #[arg(help = "Dump state on exit", short, long, default_value_t = false)]
+    pub dump_state_exit: bool,
+
     // Step through program
     #[arg(
         help = "Step through instruction by instruction",

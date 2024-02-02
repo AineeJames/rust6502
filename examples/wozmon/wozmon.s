@@ -37,7 +37,7 @@ GETLINE:        LDA #$0a        ; CR.
 BACKSPACE:      DEY             ; Back up text index.
                 BMI GETLINE     ; Beyond start of line, reinitialize.
                 LDA #$08        ; backspace
-                JSR ECHO
+                ; JSR ECHO
 NEXTCHAR:       LDA KBD         ; Key ready?
                 CMP #0
                 BEQ NEXTCHAR    ; Loop until ready.

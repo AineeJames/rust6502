@@ -31,5 +31,9 @@ fn main() {
     if cpu.cmdline_args.keyboard {
         disable_raw_mode().expect("Failed to enable raw mode.");
     }
-    // just to be sure
+
+    if cpu.cmdline_args.dump_state_exit {
+        cpu.cmdline_args.no_print = false;
+        cpu.print_state();
+    }
 }
