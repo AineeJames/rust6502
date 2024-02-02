@@ -1,10 +1,10 @@
 use crate::cpu6502::MEM_SIZE;
 use colored::Colorize;
-use crossterm::{execute, terminal};
 use log::debug;
-use std::io::{self, stdout, Write};
+use std::io::{self, Write};
 
 const BACKSPACE: u8 = 0x08;
+const CARRIAGE_RETURN: u8 = 0x0d;
 
 pub enum MemMap {
     CHROUT = 0xFE00,
@@ -43,18 +43,15 @@ impl Mem {
                 }
                 if val == BACKSPACE {
                     print!("\u{0008}");
-                    //std::io::stdout().flush().ok().expect("Could not flush :(");
                     print!(" ");
-                    //std::io::stdout().flush().ok().expect("Could not flush :(");
                     print!("\u{0008}");
                     return;
                 }
+                if val == CARRIAGE_RETURN {
+                    print!("\r\n");
+                }
                 // more efficient writing of chracters to stdout
-                //io::stdout().write_all(&[val]).unwrap();
-                print!("{}", val as char);
-                //println!("0x{:#>02x}\r", val);
-                //execute!(stdout(), terminal::LeaveAlternateScreen).unwrap();
-                //std::io::stdout().flush().ok().expect("Could not flush :(");
+                io::stdout().write_all(&[val]).unwrap();
             }
             // MemMap::CHRIN => println!("Char: {}\r", val as char),
             _ => {}
