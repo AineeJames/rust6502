@@ -20,8 +20,8 @@ IN              = $0200         ;  Input buffer to $027F
 KBD             = $FE01         ;  PIA.A keyboard input
 DSP             = $FE00         ;  PIA.B display output register
 
-RESET:          CLD             ; Clear decimal arithmetic mode.
-                CLI
+RESET:          ;CLD             ; Clear decimal arithmetic mode.
+                ;CLI
                 LDY #$7F        ; Mask for DSP data direction register.
 NOTCR:          CMP #$08        ; BACKSPACE?
                 BEQ BACKSPACE   ; Yes.
@@ -36,8 +36,6 @@ GETLINE:        LDA #$0d        ; CR.
                 LDY #$01        ; Initialize text index.
 BACKSPACE:      DEY             ; Back up text index.
                 BMI GETLINE     ; Beyond start of line, reinitialize.
-                LDA #$08        ; backspace
-                ; JSR ECHO
 NEXTCHAR:       LDA KBD         ; Key ready?
                 CMP #0
                 BEQ NEXTCHAR    ; Loop until ready.
@@ -60,12 +58,12 @@ NEXTITEM:       LDA IN,Y        ; Get character.
                 BEQ GETLINE     ; Yes, done this line.
                 CLC
                 ADC #$80
-                CMP #'.' + $80       ; "."?
+                CMP #'.' + $80  ; "."?
                 BCC BLSKIP      ; Skip delimiter.
                 BEQ SETMODE     ; Set BLOCK XAM mode.
-                CMP #':' + $80        ; ":"? 
+                CMP #':' + $80  ; ":"? 
                 BEQ SETSTOR     ; Yes. Set STOR mode.
-                CMP #'R' + $80        ; "R"?
+                CMP #'R' + $80  ; "R"?
                 BEQ RUN         ; Yes. Run user program.
                 STX L           ; $00->L.
                 STX H           ;  and H.
@@ -75,9 +73,8 @@ NEXTHEX:        LDA IN,Y        ; Get character for hex test.
                 CMP #$0d        ; Digit?
                 BCC DIG         ; Yes.
                 EOR #$30        ; Map digits to $0-9.
-                SBC #$41        ; Map letter "A"-"F" to $FA-FF.
                 CLC
-                ADC #$fa
+                ADC #$fa-$41
                 CMP #$fa        ; Hex letter?
                 BCC NOTHEX      ; No, character not hex.
 DIG:            ASL
@@ -157,9 +154,6 @@ ECHO:                           ; DA bit (B7) cleared yet?
                 STA DSP
                 PLA
                 RTS             ; Return.
-
-                BRK             ; unused
-                BRK             ; unused
 
 ; Interrupt Vectors
 .segment "RESETVEC"
