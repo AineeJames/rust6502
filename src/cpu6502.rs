@@ -251,10 +251,20 @@ impl Cpu6502 {
     fn get_zpg_indirect_addr(&mut self, index: Index) -> usize {
         let addr = match index {
             Index::X => {
-                self.memory.get_byte((self.program_counter + 1) as usize) + self.x_index as u8
+                let ptrptr: usize = self.memory.get_byte((self.program_counter + 1) as usize)
+                    as usize
+                    + self.x_index as usize;
+                let ll = self.memory.get_byte(ptrptr) as usize;
+                let hh = self.memory.get_byte(ptrptr + 1) as usize;
+                (hh << 8) | ll
             }
             Index::Y => {
-                self.memory.get_byte((self.program_counter + 1) as usize) + self.y_index as u8
+                let ptrptr: usize = self.memory.get_byte((self.program_counter + 1) as usize)
+                    as usize
+                    + self.y_index as usize;
+                let ll = self.memory.get_byte(ptrptr) as usize;
+                let hh = self.memory.get_byte(ptrptr + 1) as usize;
+                (hh << 8) | ll
             }
         };
         addr as usize
@@ -348,7 +358,7 @@ impl Cpu6502 {
         }
         self.status_flags.set_flag(
             status_reg::Flag::Negative,
-            (self.x_index - self.memory.get_byte(addr)) & 0b1000000 != 0,
+            (!(self.x_index as u8 + self.memory.get_byte(addr) as u8 + 1)) & 0b1000000 != 0,
         );
         self.status_flags.set_flag(
             status_reg::Flag::Zero,
@@ -366,7 +376,7 @@ impl Cpu6502 {
         }
         self.status_flags.set_flag(
             status_reg::Flag::Negative,
-            (self.y_index - self.memory.get_byte(addr)) & 0b1000000 != 0,
+            (!(self.y_index as u8 + self.memory.get_byte(addr) as u8 + 1)) & 0b1000000 != 0,
         );
         self.status_flags.set_flag(
             status_reg::Flag::Zero,

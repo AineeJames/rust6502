@@ -72,7 +72,7 @@ impl Mem {
 
     pub fn dump_memory(&self, print_all: bool, pc: u16, sp: u8) {
         let mut new_zero_line: bool = true;
-        println!("Memory:");
+        println!("Memory: 0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f");
         for i in (0..MEM_SIZE).step_by(0x10) {
             let slice = &self.memory[i..i + 0x10];
             if slice.iter().any(|&x| x > 0) || print_all {

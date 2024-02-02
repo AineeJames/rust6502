@@ -74,14 +74,17 @@ NEXTHEX:        LDA IN,Y        ; Get character for hex test.
                 BCC DIG         ; Yes.
                 EOR #$30        ; Map digits to $0-9.
                 SBC #$41        ; Map letter "A"-"F" to $FA-FF.
-                CMP #$05        ; Hex letter?
-                BCS NOTHEX      ; No, character not hex.
+                CLC
+                ADC #$fa
+                CMP #$fa        ; Hex letter?
+                BCC NOTHEX      ; No, character not hex.
 DIG:            ASL
                 ASL             ; Hex digit to MSD of A.
                 ASL
                 ASL
                 LDX #$04        ; Shift count.
-HEXSHIFT:       ASL             ; Hex digit left, MSB to carry.
+HEXSHIFT:       
+                ASL             ; Hex digit left, MSB to carry.
                 ROL L           ; Rotate into LSD.
                 ROL H           ; Rotate into MSD’s.
                 DEX             ; Done 4 shifts?
@@ -94,7 +97,7 @@ NOTHEX:         CPY YSAV        ; Check if L, H empty (no hex digits).
                 BVC NOTSTOR     ; B6=0 STOR, 1 for XAM and BLOCK XAM
                 LDA L           ; LSD’s of hex data.
                 STA (STL,X)     ; Store at current ‘store index’.
-                INC STL         ; Increment store index.
+                INC STL         ; Inc
                 BNE NEXTITEM    ; Get next item. (no carry).
                 INC STH         ; Add carry to ‘store index’ high order.
 TONEXTITEM:     JMP NEXTITEM    ; Get next command item.
@@ -115,7 +118,7 @@ NXTPRNT:        BNE PRDATA      ; NE means no address to print.
                 JSR PRBYTE      ; Output it in hex format.
                 LDA #':'        ; ":".
                 JSR ECHO        ; Output it.
-PRDATA:         LDA #$A0        ; Blank.
+PRDATA:         LDA #$20        ; Blank.
                 JSR ECHO        ; Output it.
                 LDA (XAML,X)    ; Get data byte at ‘examine index’.
                 JSR PRBYTE      ; Output it in hex format.
@@ -138,10 +141,10 @@ PRBYTE:         PHA             ; Save A for LSD.
                 LSR
                 JSR PRHEX       ; Output hex digit.
                 PLA             ; Restore A.
-PRHEX:          AND #$0F        ; Mask LSD for hex print.
-                BRK
-                ORA #'0'+$80    ; Add "0".
-                CMP #$BA        ; Digit? meaning <= ALU
+PRHEX:          CLC 
+                AND #$0F        ; Mask LSD for hex print.
+                ADC #'0'        ; Add "0".
+                CMP #$39        ; Digit? meaning <= ALU
                 BCC ECHO        ; Yes, output it.
                 ADC #$06        ; Add offset for letter.
 ECHO:                           ; DA bit (B7) cleared yet?
