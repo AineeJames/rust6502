@@ -22,7 +22,7 @@ DSP             = $FE00         ;  PIA.B display output register
 
 RESET:          CLD             ; Clear decimal arithmetic mode.
                 CLI
-                ;LDY #$7F        ; Mask for DSP data direction register.
+                LDY #$7F        ; Mask for DSP data direction register.
                 ;STY DSP         ; Set it up.
                 ;LDA #$A7        ; KBD and DSP control register mask.
                 ;STA KBDCR       ; Enable interrupts, set CA1, CB1, for
@@ -32,11 +32,10 @@ NOTCR:          CMP #$08        ; BACKSPACE?
                 CMP #$9B        ; ESC?
                 BEQ ESCAPE      ; Yes.
                 INY             ; Advance text index.
-                ORA #$80
                 BPL NEXTCHAR    ; Auto ESC if > 127.
 ESCAPE:         LDA #'\'        ; "\".
                 JSR ECHO        ; Output it.
-GETLINE:        LDA #$0a        ; CR.
+GETLINE:        LDA #$0d        ; CR.
                 JSR ECHO        ; Output it.
                 LDY #$01        ; Initialize text index.
 BACKSPACE:      DEY             ; Back up text index.
