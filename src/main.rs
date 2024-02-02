@@ -1,5 +1,5 @@
-use clap::Parser;
-use crossterm::terminal::disable_raw_mode;
+use clap::{Arg, Parser};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 pub mod cpu6502;
 
 mod utils {
@@ -14,15 +14,22 @@ fn main() {
 
     let mut cpu: cpu6502::Cpu6502 = cpu6502::init_cpu6502(args);
 
+    if cpu.cmdline_args.keyboard {
+        enable_raw_mode().expect("Failed to enable raw mode.");
+    }
     // TODO: be smarter to ctrl c and react and exit
     // right now just stops from exiting until ctrl+c
     // is caught in keyboard input function
     ctrlc::set_handler(move || {
         println!("received Ctrl+C!");
-        disable_raw_mode().expect("Failed to disable raw mode.");
+        //disable_raw_mode().expect("Failed to disable raw mode.");
     })
     .expect("Error setting Ctrl-C handler");
+
     cpu.load_file_into_memory();
     cpu.run();
+    if cpu.cmdline_args.keyboard {
+        disable_raw_mode().expect("Failed to enable raw mode.");
+    }
     // just to be sure
 }

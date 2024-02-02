@@ -860,7 +860,6 @@ impl Cpu6502 {
                     Some(Ok(event)) => {
                         if let Event::Key(key_event) = event{
                             // println!("{:?},{:?}",key_event.code,key_event.modifiers);
-                            disable_raw_mode().expect("Failed to disable raw mode.");
                             match key_event.code {
                                 KeyCode::Backspace => {
                                     self.set_byte_wrap(memory::MemMap::CHRIN as usize, 0x08);
@@ -898,9 +897,7 @@ impl Cpu6502 {
 
         loop {
             if self.cmdline_args.keyboard {
-                enable_raw_mode().expect("Failed to enable raw mode.");
                 let success = self.handle_keyboard(&mut reader);
-                disable_raw_mode().expect("Failed to disable raw mode.");
                 if !success {
                     println!("Disabled Raw mode and exiting");
                     return;

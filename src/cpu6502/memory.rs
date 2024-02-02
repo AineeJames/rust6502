@@ -37,7 +37,7 @@ impl Mem {
         self.memory[index as usize] = val;
         match MemMap::from_index(index) {
             MemMap::CHROUT => {
-                // println!(" 0x{:#>02x} \r", val);
+                //println!(" 0x{:#>02x} \r", val);
                 if val == 0x0 {
                     return;
                 }
@@ -50,7 +50,8 @@ impl Mem {
                     return;
                 }
                 // more efficient writing of chracters to stdout
-                io::stdout().write_all(&[val]).unwrap();
+                //io::stdout().write_all(&[val]).unwrap();
+                print!("{}", val as char);
                 //println!("0x{:#>02x}\r", val);
                 //execute!(stdout(), terminal::LeaveAlternateScreen).unwrap();
                 //std::io::stdout().flush().ok().expect("Could not flush :(");
