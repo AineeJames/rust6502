@@ -14,6 +14,9 @@ fn main() {
 
     let mut cpu: cpu6502::Cpu6502 = cpu6502::init_cpu6502(args);
 
+    // TODO: be smarter to ctrl c and react and exit
+    // right now just stops from exiting until ctrl+c
+    // is caught in keyboard input function
     ctrlc::set_handler(move || {
         println!("received Ctrl+C!");
         disable_raw_mode().expect("Failed to disable raw mode.");
