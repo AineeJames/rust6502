@@ -69,13 +69,14 @@ NEXTITEM:       LDA IN,Y        ; Get character.
                 STX H           ;  and H.
                 STY YSAV        ; Save Y for comparison.
 NEXTHEX:        LDA IN,Y        ; Get character for hex test.
-                EOR #$B0        ; Map digits to $0-9.
-                CMP #$0A        ; Digit?
+                EOR #$30        ; Map digits to $0-9.
+                CMP #$0a        ; Digit?
                 BCC DIG         ; Yes.
-                ADC #$88        ; Map letter "A"-"F" to $FA-FF.
-                CMP #$FA        ; Hex letter?
+                SBC #$41        ; Map letter "A"-"F" to $FA-FF.
+                CMP #$05        ; Hex letter?
                 BCC NOTHEX      ; No, character not hex.
 DIG:            ASL
+                BRK
                 ASL             ; Hex digit to MSD of A.
                 ASL
                 ASL

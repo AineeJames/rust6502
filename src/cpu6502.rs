@@ -790,7 +790,13 @@ impl Cpu6502 {
     }
 
     fn brk(&mut self, mode: operation::AddressingMode) {
-        todo!("Need to implement brk");
+        let np = self.cmdline_args.no_print;
+        self.cmdline_args.no_print = false;
+        disable_raw_mode().unwrap();
+        self.print_state();
+        enable_raw_mode().unwrap();
+        pause_for_input();
+        self.cmdline_args.no_print = np;
     }
 
     fn ora(&mut self, mode: operation::AddressingMode) {

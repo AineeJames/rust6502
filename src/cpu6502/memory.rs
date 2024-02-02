@@ -37,7 +37,7 @@ impl Mem {
         self.memory[index as usize] = val;
         match MemMap::from_index(index) {
             MemMap::CHROUT => {
-                //println!(" 0x{:#>02x} \r", val);
+                // println!(" 0x{:#>02x} \r", val);
                 if val == 0x0 {
                     return;
                 }
