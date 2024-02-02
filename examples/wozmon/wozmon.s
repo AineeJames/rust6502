@@ -31,7 +31,7 @@ NOTCR:          CMP #$08        ; BACKSPACE?
                 BPL NEXTCHAR    ; Auto ESC if > 127.
 ESCAPE:         LDA #'\'        ; "\".
                 JSR ECHO        ; Output it.
-GETLINE:        LDA #$0a        ; CR.
+GETLINE:        LDA #$0d        ; CR.
                 JSR ECHO        ; Output it.
                 LDY #$01        ; Initialize text index.
 BACKSPACE:      DEY             ; Back up text index.
@@ -72,7 +72,7 @@ NEXTITEM:       LDA IN,Y        ; Get character.
                 STY YSAV        ; Save Y for comparison.
 NEXTHEX:        LDA IN,Y        ; Get character for hex test.
                 EOR #$30        ; Map digits to $0-9.
-                CMP #$0a        ; Digit?
+                CMP #$0d        ; Digit?
                 BCC DIG         ; Yes.
                 EOR #$30        ; Map digits to $0-9.
                 SBC #$41        ; Map letter "A"-"F" to $FA-FF.
