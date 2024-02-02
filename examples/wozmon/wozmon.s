@@ -58,12 +58,14 @@ BLSKIP:         INY             ; Advance text index.
 NEXTITEM:       LDA IN,Y        ; Get character.
                 CMP #$0d        ; CR?
                 BEQ GETLINE     ; Yes, done this line.
-                CMP #'.'        ; "."?
+                CLC
+                ADC #$80
+                CMP #'.' + $80       ; "."?
                 BCC BLSKIP      ; Skip delimiter.
                 BEQ SETMODE     ; Set BLOCK XAM mode.
-                CMP #':'        ; ":"?
+                CMP #':' + $80        ; ":"? 
                 BEQ SETSTOR     ; Yes. Set STOR mode.
-                CMP #'R'        ; "R"?
+                CMP #'R' + $80        ; "R"?
                 BEQ RUN         ; Yes. Run user program.
                 STX L           ; $00->L.
                 STX H           ;  and H.
@@ -144,7 +146,7 @@ PRBYTE:         PHA             ; Save A for LSD.
 PRHEX:          CLC 
                 AND #$0F        ; Mask LSD for hex print.
                 ADC #'0'        ; Add "0".
-                CMP #$39        ; Digit? meaning <= ALU
+                CMP #$3a        ; Digit? meaning <= ALU
                 BCC ECHO        ; Yes, output it.
                 ADC #$06        ; Add offset for letter.
 ECHO:                           ; DA bit (B7) cleared yet?
