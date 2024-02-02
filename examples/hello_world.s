@@ -1,10 +1,10 @@
 .setcpu "6502"
 
-.define CHOUT $FF00
+.define CHOUT $FE00
 
 .segment "DATA"
 hello: 
-  .asciiz "Hello, World!"
+  .byte "Hello, World!", $0A, $00
 index:
   .byte $00
 
@@ -21,7 +21,7 @@ JMP $0600     ; jump to org and rerun
 
 print:
   LDA index
-  CMP #$0D    ; Compare with the length of the string
+  CMP #$0F    ; Compare with the length of the string
   BEQ done    ; if eq you are done
   LDX index   ; laod index to x
   LDA hello,X ; load string addr index by index

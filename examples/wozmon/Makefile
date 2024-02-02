@@ -15,10 +15,3 @@ all: $(OBJECT_FILES)
 clean:
 	rm -f $(OBJECT_FILES)
 
-SUBDIRS := $(wildcard */.)
-
-all: $(SUBDIRS)
-$(SUBDIRS):
-		$(MAKE) -C $@
-
-.PHONY: all $(SUBDIRS)
