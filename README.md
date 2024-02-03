@@ -3,7 +3,7 @@
 Run:
 
 ```shell
-cargo run -- -b examples/hello_world -n
+cargo run -- examples/wozmon/wozmon.s -n -k
 ```
 
 To Implement:

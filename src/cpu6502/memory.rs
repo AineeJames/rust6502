@@ -47,6 +47,7 @@ impl Mem {
             }
             if val == CARRIAGE_RETURN {
                 print!("\r\n");
+                return;
             }
             // more efficient writing of chracters to stdout
             io::stdout().write_all(&[val]).unwrap();
