@@ -1,4 +1,4 @@
-use clap::{Arg, Parser};
+use clap::Parser;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 pub mod cpu6502;
 

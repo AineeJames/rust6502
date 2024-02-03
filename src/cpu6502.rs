@@ -2,9 +2,9 @@ use crate::utils::pause::pause_for_input;
 use clap::Parser;
 use colored::Colorize;
 use crossterm::terminal::disable_raw_mode;
-use log::{debug, info};
+use log::debug;
 use std::time::Instant;
-use std::{fs, io, usize};
+use std::{fs, usize};
 pub mod memory;
 pub mod operation;
 pub mod status_reg;
@@ -91,7 +91,7 @@ pub struct Cpu6502 {
 }
 
 pub fn init_cpu6502(args: Args) -> Cpu6502 {
-    let cpu = Cpu6502 {
+    Cpu6502 {
         instructions_executed: 0,
         start_time: Instant::now(),
         cmdline_args: args,
@@ -111,9 +111,7 @@ pub fn init_cpu6502(args: Args) -> Cpu6502 {
             z: false,
             c: false,
         },
-    };
-
-    cpu
+    }
 }
 
 enum Index {
@@ -160,8 +158,7 @@ impl Cpu6502 {
     }
 
     fn get_next_byte(&mut self) -> u8 {
-        let instruction: u8 = *self.memory.get(self.program_counter as usize).unwrap();
-        return instruction;
+        *self.memory.get(self.program_counter as usize).unwrap()
     }
 
     fn print_instruction(&mut self, instruction: &operation::InstructionMetadata) {
@@ -181,7 +178,7 @@ impl Cpu6502 {
                     self.get_addr(operation::AddressingMode::Relative)
                 )
             }
-            operation::AddressingMode::Implied => format!(""),
+            operation::AddressingMode::Implied => String::new(),
             operation::AddressingMode::Absolute => {
                 format!("${:#>04x}", self.get_addr(instruction.mode))
             }
@@ -229,12 +226,12 @@ impl Cpu6502 {
     fn get_abs_addr(&self) -> usize {
         let ll = self.memory.get_byte((self.program_counter + 1) as usize) as usize;
         let hh = self.memory.get_byte((self.program_counter + 2) as usize) as usize;
-        let addr = (hh << 8) | ll;
-        return addr;
+        // returned Big endian address
+        (hh << 8) | ll
     }
 
     fn get_zpg_addr(&mut self, index: Option<Index>) -> usize {
-        let addr = match index {
+        match index {
             Some(Index::X) => {
                 self.x_index as usize
                     + self.memory.get_byte((self.program_counter + 1) as usize) as usize
@@ -244,12 +241,11 @@ impl Cpu6502 {
                     + self.memory.get_byte((self.program_counter + 1) as usize) as usize
             }
             None => self.memory.get_byte((self.program_counter + 1) as usize) as usize,
-        };
-        return addr;
+        }
     }
 
     fn get_zpg_indirect_addr(&mut self, index: Index) -> usize {
-        let addr = match index {
+        match index {
             Index::X => {
                 let ptrptr: usize = self.memory.get_byte((self.program_counter + 1) as usize)
                     as usize
@@ -266,8 +262,7 @@ impl Cpu6502 {
                 let hh = self.memory.get_byte(ptrptr + 1) as usize;
                 (hh << 8) | ll
             }
-        };
-        addr as usize
+        }
     }
 
     fn get_abs_indirect_addr(&mut self) -> usize {
@@ -278,12 +273,12 @@ impl Cpu6502 {
         } else {
             self.memory.get_byte(mem_addr + 1) as usize
         };
-        let addr = (hh << 8) | ll;
-        return addr;
+        // returning big endian address
+        (hh << 8) | ll
     }
 
     fn get_addr(&mut self, mode: operation::AddressingMode) -> usize {
-        let addr: usize = match mode {
+        match mode {
             operation::AddressingMode::Implied => 0,
             operation::AddressingMode::Relative => self.program_counter as usize + 1,
             operation::AddressingMode::Immediate => self.program_counter as usize + 1,
@@ -305,14 +300,13 @@ impl Cpu6502 {
                 self.get_zpg_indirect_addr(Index::Y)
             }
             _ => todo!("Mode not implemented in get_addr()"),
-        };
-        return addr;
+        }
     }
 
     pub fn set_byte_wrap(&mut self, index: usize, val: u8) {
         self.memory.set_byte(index, val);
         if self.cmdline_args.keyboard && index == memory::MemMap::CHROUT as usize {
-            std::io::stdout().flush().ok().expect("Could not flush :(");
+            std::io::stdout().flush().expect("Could not flush :(");
         }
     }
 
@@ -358,7 +352,7 @@ impl Cpu6502 {
         }
         self.status_flags.set_flag(
             status_reg::Flag::Negative,
-            (!(self.x_index as u8 + self.memory.get_byte(addr) as u8 + 1)) & 0b1000000 != 0,
+            (!(self.x_index + self.memory.get_byte(addr) + 1)) & 0b1000000 != 0,
         );
         self.status_flags.set_flag(
             status_reg::Flag::Zero,
@@ -376,7 +370,7 @@ impl Cpu6502 {
         }
         self.status_flags.set_flag(
             status_reg::Flag::Negative,
-            (!(self.y_index as u8 + self.memory.get_byte(addr) as u8 + 1)) & 0b1000000 != 0,
+            (!(self.y_index + self.memory.get_byte(addr) + 1)) & 0b1000000 != 0,
         );
         self.status_flags.set_flag(
             status_reg::Flag::Zero,
@@ -569,7 +563,7 @@ impl Cpu6502 {
 
     fn eor(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
-        self.accumulator = self.accumulator ^ self.memory.get_byte(addr);
+        self.accumulator ^= self.memory.get_byte(addr);
         self.status_flags
             .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
         self.status_flags
@@ -699,7 +693,7 @@ impl Cpu6502 {
             operation::AddressingMode::Accumulator => {
                 self.status_flags
                     .set_flag(status_reg::Flag::Carry, (self.accumulator & 0b1) == 1);
-                self.accumulator = self.accumulator >> 1;
+                self.accumulator >>= 1;
                 self.status_flags
                     .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
             }
@@ -708,7 +702,7 @@ impl Cpu6502 {
                 let mut val = self.memory.get_byte(addr);
                 self.status_flags
                     .set_flag(status_reg::Flag::Carry, (val & 0b1) == 1);
-                val = val >> 1;
+                val >>= 1;
                 self.set_byte_wrap(addr, val);
                 self.status_flags.set_flag(status_reg::Flag::Zero, val == 0);
             }
@@ -719,7 +713,7 @@ impl Cpu6502 {
 
     fn and(&mut self, mode: operation::AddressingMode) {
         let addr = self.get_addr(mode);
-        self.accumulator = self.memory.get_byte(addr) & self.accumulator;
+        self.accumulator &= self.memory.get_byte(addr);
         self.status_flags
             .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
         self.status_flags
@@ -747,7 +741,7 @@ impl Cpu6502 {
                 let shift_out_bit = (self.accumulator & 0b10000000) >> 7;
                 self.status_flags
                     .set_flag(status_reg::Flag::Carry, shift_out_bit == 1);
-                self.accumulator = self.accumulator << 1;
+                self.accumulator <<= 1;
                 let result_msb = (self.accumulator & 0b10000000) >> 7;
                 self.status_flags
                     .set_flag(status_reg::Flag::Negative, result_msb == 1);
@@ -760,7 +754,7 @@ impl Cpu6502 {
                 let shift_out_bit = (val & 0b10000000) >> 7;
                 self.status_flags
                     .set_flag(status_reg::Flag::Carry, shift_out_bit == 1);
-                val = val << 1;
+                val <<= 1;
                 let result_msb = (val & 0b10000000) >> 7;
                 self.status_flags
                     .set_flag(status_reg::Flag::Negative, result_msb == 1);
@@ -778,7 +772,7 @@ impl Cpu6502 {
                     .set_flag(status_reg::Flag::Negative, carry_before_shift == 1);
                 self.status_flags
                     .set_flag(status_reg::Flag::Carry, (self.accumulator & 0b1) == 1);
-                self.accumulator = self.accumulator >> 1;
+                self.accumulator >>= 1;
                 self.accumulator |= carry_before_shift << 7;
                 self.status_flags
                     .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
@@ -791,7 +785,7 @@ impl Cpu6502 {
                     .set_flag(status_reg::Flag::Negative, carry_before_shift == 1);
                 self.status_flags
                     .set_flag(status_reg::Flag::Carry, (val & 0b1) == 1);
-                val = val >> 1;
+                val >>= 1;
                 val |= carry_before_shift << 7;
                 self.set_byte_wrap(addr, val);
                 self.status_flags.set_flag(status_reg::Flag::Zero, val == 0);
@@ -799,7 +793,7 @@ impl Cpu6502 {
         };
     }
 
-    fn brk(&mut self, mode: operation::AddressingMode) {
+    fn brk(&mut self, _mode: operation::AddressingMode) {
         let np = self.cmdline_args.no_print;
         self.cmdline_args.no_print = false;
         disable_raw_mode().unwrap();
@@ -820,7 +814,7 @@ impl Cpu6502 {
         );
     }
 
-    fn rti(&mut self, mode: operation::AddressingMode) {
+    fn rti(&mut self, _mode: operation::AddressingMode) {
         todo!("Need to implement rti");
     }
 
@@ -837,7 +831,7 @@ impl Cpu6502 {
                     status_reg::Flag::Carry,
                     (self.accumulator & 0b10000000) >> 7 == 1,
                 );
-                self.accumulator = self.accumulator << 1;
+                self.accumulator <<= 1;
                 self.accumulator |= carry_before_shift;
                 self.status_flags
                     .set_flag(status_reg::Flag::Zero, self.accumulator == 0);
@@ -850,7 +844,7 @@ impl Cpu6502 {
                     .set_flag(status_reg::Flag::Negative, val & 0b01000000 != 0);
                 self.status_flags
                     .set_flag(status_reg::Flag::Carry, (val & 0b10000000) >> 7 == 1);
-                val = val << 1;
+                val <<= 1;
                 val |= carry_before_shift;
                 self.set_byte_wrap(addr, val);
                 self.status_flags.set_flag(status_reg::Flag::Zero, val == 0);
@@ -872,7 +866,7 @@ impl Cpu6502 {
     fn pop_stack(&mut self) -> u8 {
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
         let stack_addr = 0x100 | (self.stack_pointer as u16);
-        return self.memory.get_byte(stack_addr as usize);
+        self.memory.get_byte(stack_addr as usize)
     }
 
     pub fn handle_keyboard(&mut self, reader: &mut EventStream) -> bool {
@@ -908,7 +902,7 @@ impl Cpu6502 {
             }
             default => return true,
         };
-        return true;
+        true
     }
 
     pub fn run(&mut self) {
@@ -1008,10 +1002,6 @@ impl Cpu6502 {
                 operation::Instruction::SEI => self
                     .status_flags
                     .set_flag(status_reg::Flag::Interrupt, true),
-                _ => todo!(
-                    "Add instruction {:?} to run()",
-                    instruction.instruction_type
-                ),
             }
             // increment program counter by instruction length
             if !matches!(
@@ -1036,7 +1026,7 @@ impl Cpu6502 {
                 let duration = self.start_time.elapsed().as_nanos();
                 // we have been executing for this long
                 let instructions_per_second =
-                    (self.instructions_executed * 1_000_000_000) as u128 / (duration as u128);
+                    (self.instructions_executed * 1_000_000_000) / duration;
                 println!(
                     "\nCurrently executing at {:?} instructions per second",
                     instructions_per_second
@@ -1056,13 +1046,13 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         debug!("Address being used to ADC {:#>04x}", addr);
         let carry_add = self.status_flags.c as u8;
-        let mem_val: u16 = self.memory.get_byte(addr as usize) as u16;
-        let overflow_flag_before_add: bool = (self.accumulator & (1 << 7)) == 1;
+        let mem_val: u16 = self.memory.get_byte(addr) as u16;
+        let overflow_flag_before_add: bool = (self.accumulator & (1 << 7)) != 0;
         let sum = mem_val + self.accumulator as u16 + carry_add as u16;
         self.accumulator = sum as u8;
         self.status_flags
             .set_flag(status_reg::Flag::Carry, sum > 255);
-        let overflow_flag_after_add: bool = (self.accumulator & (1 << 7)) == 1;
+        let overflow_flag_after_add: bool = (self.accumulator & (1 << 7)) != 0;
         self.status_flags.set_flag(
             status_reg::Flag::Overflow,
             overflow_flag_after_add != overflow_flag_before_add,
@@ -1075,15 +1065,15 @@ impl Cpu6502 {
         let addr = self.get_addr(mode);
         debug!("Address being used to SBC {:#>04x}", addr);
         let carry_subtract = 1 - self.status_flags.c as u8; // Subtract carry (1's complement of carry)
-        let mem_val: u16 = self.memory.get_byte(addr as usize) as u16;
-        let overflow_flag_before_sub: bool = (self.accumulator & (1 << 7)) == 1;
+        let mem_val: u16 = self.memory.get_byte(addr) as u16;
+        let overflow_flag_before_sub: bool = (self.accumulator & (1 << 7)) != 0;
         let diff = (self.accumulator as u16)
             .wrapping_sub(mem_val)
             .wrapping_sub(carry_subtract as u16);
         self.accumulator = diff as u8;
         self.status_flags
             .set_flag(status_reg::Flag::Carry, diff < 0x100);
-        let overflow_flag_after_sub: bool = (self.accumulator & (1 << 7)) == 1;
+        let overflow_flag_after_sub: bool = (self.accumulator & (1 << 7)) != 0;
         self.status_flags.set_flag(
             status_reg::Flag::Overflow,
             overflow_flag_after_sub != overflow_flag_before_sub,

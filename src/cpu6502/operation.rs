@@ -440,20 +440,10 @@ pub fn get_opcode_metadata(opcode: u8) -> InstructionMetadata {
     // get operation from const lookup table
     let operation = OPCODE_METADATA[opcode as usize];
 
-    match operation.instruction_type {
-        Instruction::NOP => {
-            match operation.mode {
-                // we set default to nop with zero page addressing
-                // when a real nop is implied addressing
-                AddressingMode::ZeroPage => {
-                    todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode)
-                }
-                _ => {}
-            }
-            if operation.instruction_byte_length == 0 {}
+    if let Instruction::NOP = operation.instruction_type {
+        if let AddressingMode::ZeroPage = operation.mode {
+            todo!("Missing instruction metadata for opcode 0x{:#>02x}", opcode)
         }
-        _ => {}
     }
-
-    return operation;
+    operation
 }

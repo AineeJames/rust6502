@@ -34,32 +34,27 @@ impl Mem {
 
     pub fn set_byte(&mut self, index: usize, val: u8) {
         debug!("set addr 0x{:#>04x} to 0x{:#>02x}", index, val);
-        self.memory[index as usize] = val;
-        match MemMap::from_index(index) {
-            MemMap::CHROUT => {
-                // println!(" 0x{:#>02x} \r", val);
-                if val == 0x0 {
-                    return;
-                }
-                if val == BACKSPACE {
-                    print!("\u{0008}");
-                    print!(" ");
-                    print!("\u{0008}");
-                    return;
-                }
-                if val == CARRIAGE_RETURN {
-                    print!("\r\n");
-                }
-                // more efficient writing of chracters to stdout
-                io::stdout().write_all(&[val]).unwrap();
+        self.memory[index] = val;
+        if let MemMap::CHROUT = MemMap::from_index(index) {
+            if val == 0x0 {
+                return;
             }
-            // MemMap::CHRIN => println!("Char: {}\r", val as char),
-            _ => {}
+            if val == BACKSPACE {
+                print!("\u{0008}");
+                print!(" ");
+                print!("\u{0008}");
+                return;
+            }
+            if val == CARRIAGE_RETURN {
+                print!("\r\n");
+            }
+            // more efficient writing of chracters to stdout
+            io::stdout().write_all(&[val]).unwrap();
         }
     }
 
     pub fn get_byte(&self, index: usize) -> u8 {
-        self.memory[index as usize]
+        self.memory[index]
     }
 
     pub fn get(&self, index: usize) -> Option<&u8> {
@@ -96,13 +91,11 @@ impl Mem {
                         print!(".")
                     }
                 }
-                print!("\n");
+                println!();
                 new_zero_line = false;
-            } else {
-                if new_zero_line == false {
-                    println!("*");
-                    new_zero_line = true;
-                }
+            } else if !new_zero_line {
+                println!("*");
+                new_zero_line = true;
             }
         }
     }
