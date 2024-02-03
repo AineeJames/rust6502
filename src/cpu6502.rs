@@ -890,7 +890,7 @@ impl Cpu6502 {
                                 _ => {}
                             }
                             if key_event.code == KeyCode::Char('c') && key_event.modifiers == KeyModifiers::CONTROL {
-                                println!("Got Ctrl+c getting out of here");
+                                print!("Got Ctrl+c getting out of here\r\n");
                                 return false;
                             }
                             return true;
@@ -916,7 +916,7 @@ impl Cpu6502 {
             if self.cmdline_args.keyboard {
                 let success = self.handle_keyboard(&mut reader);
                 if !success {
-                    println!("Disabled Raw mode and exiting");
+                    print!("Disabled Raw mode and exiting\r\n");
                     return;
                 }
             }
