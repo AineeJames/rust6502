@@ -3,7 +3,6 @@ use clap::Parser;
 use colored::Colorize;
 use crossterm::terminal::disable_raw_mode;
 use log::debug;
-use std::time::Instant;
 use std::{fs, usize};
 pub mod memory;
 pub mod operation;
@@ -11,12 +10,12 @@ pub mod status_reg;
 
 use std::io::Write;
 
-use futures::{future::FutureExt, select, StreamExt};
-
 use crossterm::{
     event::{Event, EventStream, KeyCode, KeyModifiers},
     terminal::enable_raw_mode,
 };
+use futures::{future::FutureExt, select, StreamExt};
+use std::time::{Duration, Instant};
 
 const MEM_SIZE: usize = 65536;
 
@@ -911,9 +910,10 @@ impl Cpu6502 {
         self.program_counter = rvec;
 
         let mut reader = EventStream::new();
-
+        let mut timer = Timer::new(Duration::from_millis(1));
         loop {
-            if self.cmdline_args.keyboard {
+            if self.cmdline_args.keyboard && timer.has_expired() {
+                timer.reset();
                 let success = self.handle_keyboard(&mut reader);
                 if !success {
                     print!("Disabled Raw mode and exiting\r\n");
@@ -1084,6 +1084,31 @@ impl Cpu6502 {
             status_reg::Flag::Negative,
             self.accumulator & 0b10000000 != 0,
         );
+    }
+}
+
+struct Timer {
+    start: Instant,
+    duration: Duration,
+}
+
+impl Timer {
+    // Creates a new timer that expires after `duration`.
+    fn new(duration: Duration) -> Self {
+        Timer {
+            start: Instant::now(),
+            duration,
+        }
+    }
+
+    // Checks if the timer has expired.
+    fn has_expired(&self) -> bool {
+        self.start.elapsed() >= self.duration
+    }
+
+    // Resets the timer to expire again after its originally specified duration.
+    fn reset(&mut self) {
+        self.start = Instant::now();
     }
 }
 
